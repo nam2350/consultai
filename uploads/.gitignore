@@ -1,0 +1,15 @@
+# Uploaded files (potentially sensitive)
+*.json
+*.csv
+*.txt
+*.docx
+*.pdf
+
+# Temporary upload files
+*.tmp
+*.temp
+*.uploading
+
+# Processing files
+processing/
+temp/

@@ -1,0 +1,14 @@
+# Downloaded AI models (large files)
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
+
+# Model cache
+transformers_cache/
+huggingface_cache/
+
+# Temporary model files
+*.tmp
+*.downloading

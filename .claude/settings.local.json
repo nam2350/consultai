@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\Workspace\\product_test_app\\src\\core\\models\\qwen3_8b\")",
+      "Bash(del \"C:\\Workspace\\product_test_app\\src\\core\\models\\qwen3_8b\\analyzer.py\")",
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(timeout:*)",
+      "Bash(dir:*)",
+      "Bash(taskkill:*)",
+      "WebSearch",
+      "Bash(powershell:*)",
+      "Bash(CUDA_VISIBLE_DEVICES=\"\" python local_test_selective_ai.py --model-tier all-llm --only-summary -c 1)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(move:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(del test_request.json)",
+      "Bash(tasklist)",
+      "Bash(del:*)",
+      "Bash(copy:*)",
+      "Bash(for i in 001 050 100 150 199)",
+      "Bash(do echo \"=== call_000$i ===\")",
+      "Bash(ls:*)",
+      "Bash(done)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git check-ignore:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

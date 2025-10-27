@@ -1,0 +1,10 @@
+# Temporary web assets
+*.tmp
+*.temp
+*.backup
+
+# Generated files
+*.min.js
+*.min.css
+build/
+dist/

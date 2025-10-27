@@ -1,0 +1,2641 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI 상담 분석 대시보드 v1.0.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            margin-top: 1rem;
+        }
+
+        .status-item {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .status-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 2rem;
+        }
+
+        .consultation-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #555;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-control,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .data-load-section {
+            background: rgba(240, 248, 255, 0.8);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .data-load-section h4 {
+            color: #333;
+            margin-bottom: 0.8rem;
+        }
+
+        .data-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .data-btn {
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+            color: white;
+        }
+
+        .data-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .data-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .random-btn {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .tier-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tier-option {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .tier-option.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tier-name {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .tier-model {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .model-selection {
+            margin-bottom: 1rem;
+        }
+
+        .model-selection select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .feature-options {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-options label {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .feature-options input[type="checkbox"] {
+            margin-right: 0.3rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .analyze-btn,
+        .clear-btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .clear-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .analyze-btn:hover,
+        .clear-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 모델 로딩용 도트 애니메이션 */
+        .loading-dots {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 1rem;
+            gap: 8px;
+        }
+
+        .loading-dots .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff9800;
+            animation: dotPulse 1.4s ease-in-out infinite both;
+        }
+
+        .loading-dots .dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dots .dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        .loading-dots .dot:nth-child(3) {
+            animation-delay: 0s;
+        }
+
+        @keyframes dotPulse {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0.6);
+                opacity: 0.4;
+            }
+
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+
+
+        .result-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* 모델 비교 관련 스타일 */
+        .analysis-mode-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .mode-option {
+            flex: 1;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .mode-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .mode-option.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea20, #764ba220);
+        }
+
+        .model-compare-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.8rem;
+            margin: 1rem 0;
+        }
+
+        .model-checkbox {
+            display: flex !important;
+            align-items: center;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .model-checkbox:hover {
+            border-color: #667eea;
+            transform: translateY(-1px);
+        }
+
+        .model-checkbox input[type="checkbox"] {
+            margin-bottom: 0.5rem !important;
+            margin-right: 0 !important;
+        }
+
+        .model-checkbox input[type="checkbox"]:checked+span {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .model-checkbox small {
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+        }
+
+        /* 비교 결과 테이블 스타일 */
+        .comparison-results {
+            background: white;
+            border-radius: 10px;
+            margin-top: 1rem;
+            overflow: auto;
+            max-height: 600px;
+            width: 100%;
+            /* 스크롤 가능한 최대 높이, 부모 컨테이너에 맞춤 */
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 0.9rem;
+            /* 테이블 텍스트 크기 조정 */
+        }
+
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .comparison-table th:nth-child(1) {
+            width: 15%;
+        }
+
+        /* 모델 */
+        .comparison-table th:nth-child(2) {
+            width: 12%;
+        }
+
+        /* 처리시간 */
+        .comparison-table th:nth-child(3) {
+            width: 10%;
+        }
+
+        /* 품질 점수 */
+        .comparison-table th:nth-child(4) {
+            width: 35%;
+        }
+
+        /* 요약 (가장 넓게) */
+        .comparison-table th:nth-child(5) {
+            width: 15%;
+        }
+
+        /* 카테고리 */
+        .comparison-table th:nth-child(6) {
+            width: 13%;
+        }
+
+        /* 제목 */
+
+        .comparison-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .performance-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .performance-badge.fast {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .performance-badge.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .performance-badge.slow {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .performance-badge.cached {
+            background: #e2e3ff;
+            color: #3d43e3;
+        }
+
+        .result-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .result-badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .result-badge.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .category-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .category-tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .title-list {
+            list-style: none;
+            margin-bottom: 1rem;
+        }
+
+        .title-list li {
+            background: white;
+            padding: 0.5rem;
+            margin-bottom: 0.3rem;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+            font-size: 0.85rem;
+        }
+
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* 로컬 파일 브라우저 스타일 */
+        #localFileBrowser {
+            background: rgba(255, 248, 240, 0.8);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .file-browser-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .date-folder-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .date-folder-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .date-folder-item:hover {
+            border-color: #667eea;
+            transform: translateY(-1px);
+        }
+
+        .date-folder-item.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .folder-name {
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+
+        .folder-info {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.8rem;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .file-item:hover {
+            background: #f8f9fa;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-load-btn {
+            padding: 0.3rem 0.6rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .test-data-info {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #555;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tier-selection {
+                grid-template-columns: 1fr;
+            }
+
+            .consultation-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI 상담 분석 대시보드 v1.0.0</h1>
+            <p>센터링크 연동 시스템 v1.0.0</p>
+
+            <div class="status-bar" id="statusBar">
+                <div class="status-item">
+                    <div class="status-value" id="statusValue">-</div>
+                    <div class="status-label">시스템 상태</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="processedCount">-</div>
+                    <div class="status-label">처리된 건수</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="avgProcessingTime">-</div>
+                    <div class="status-label">평균 처리시간</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="modelStatus">-</div>
+                    <div class="status-label">모델 상태</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2>🔹 상담 데이터 입력</h2>
+
+                <!-- 1. 테스트 데이터 로드 섹션 -->
+                <div class="data-load-section">
+                    <h4>🔸 테스트 데이터</h4>
+                    <div class="data-buttons">
+                        <button class="data-btn random-btn" onclick="loadTestData()">
+                            랜덤 데이터 로드
+                        </button>
+                        <button class="data-btn" onclick="toggleLocalFileBrowser()"
+                            style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                            실제 파일 디렉토리
+                        </button>
+                        <button class="data-btn upload-btn" onclick="document.getElementById('jsonFileInput').click()">
+                            브라우저 파일 업로드
+                        </button>
+                        <input type="file" id="jsonFileInput" accept=".json" style="display: none;"
+                            onchange="handleFileUpload(event)">
+                    </div>
+                </div>
+
+                <!-- 2. 실제 통화 데이터 섹션 -->
+                <div class="data-load-section" id="localFileBrowser" style="display: none;">
+                    <h4>실제 통화 데이터 (call_data)</h4>
+                    <div id="localFileContent">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <div class="spinner" id="fileBrowserSpinner" style="display: none;"></div>
+                            <p id="fileBrowserStatus">통화 데이터를 로드하려면 위의 '실제 파일 디렉토리' 버튼을 클릭하세요.</p>
+                        </div>
+                        <div id="fileBrowserResults" style="display: none;">
+                            <div class="file-browser-header"
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <span style="font-weight: 500; color: #555;">📅 날짜 폴더 선택</span>
+                                <button onclick="refreshLocalFiles()"
+                                    style="padding: 0.3rem 0.8rem; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">
+                                    🔄 새로고침
+                                </button>
+                            </div>
+                            <div id="dateFolder" class="date-folder-list"></div>
+                            <div id="fileList" class="file-list" style="display: none; margin-top: 1rem;">
+                                <div class="file-browser-header" style="margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 500; color: #555;">📄 파일 선택</span>
+                                </div>
+                                <div id="fileItems"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 상담정보 입력 -->
+                <div class="form-group">
+                    <label>상담 정보</label>
+                    <div class="consultation-info-grid">
+                        <div>
+                            <label for="consultationId"
+                                style="font-size: 0.9rem; color: #666; margin-bottom: 0.3rem;">상담 ID</label>
+                            <input type="text" id="consultationId" class="form-control"
+                                style="width: 100%; padding: 0.8rem; border: 2px solid #e0e0e0; border-radius: 8px;"
+                                placeholder="ex : 1752541125.55333.1752541205.55375">
+                        </div>
+                        <div>
+                            <label for="fileName"
+                                style="font-size: 0.9rem; color: #666; margin-bottom: 0.3rem;">파일명</label>
+                            <input type="text" id="fileName" class="form-control"
+                                style="width: 100%; padding: 0.8rem; border: 2px solid #e0e0e0; border-radius: 8px;"
+                                placeholder="ex : call_00001.json">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 상담 내용 입력 -->
+                <div class="form-group">
+                    <label for="consultationContent">상담 내용 (선택 사항)</label>
+                    <textarea id="consultationContent" rows="3" placeholder="상담 요약이 여기에 표시됩니다."></textarea>
+                </div>
+
+                <!-- 4. STT 통화 데이터 입력 -->
+                <div class="form-group">
+                    <label for="sttData">STT 통화 데이터</label>
+                    <textarea id="sttData" rows="8" placeholder="통화내용이 표시됩니다."></textarea>
+                </div>
+
+                <!-- 분석 모드 선택 -->
+                <div class="form-group">
+                    <label>분석 모드</label>
+                    <div class="analysis-mode-selector">
+                        <div class="mode-option active" id="singleMode" onclick="selectAnalysisMode('single')">
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                                <input type="radio" name="analysisMode" value="single" checked
+                                    style="margin-right: 0.5rem;">
+                                <span class="tier-name">단일 모델 분석</span>
+                            </div>
+                            <div class="tier-model">하나의 모델로 분석</div>
+                        </div>
+                        <div class="mode-option" id="compareMode" onclick="selectAnalysisMode('compare')">
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                                <input type="radio" name="analysisMode" value="compare" style="margin-right: 0.5rem;">
+                                <span class="tier-name">모델 성능 비교</span>
+                            </div>
+                            <div class="tier-model">여러 모델 동시 비교</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 단일 분석 모드 -->
+                <div id="singleAnalysisOptions">
+                    <!-- AI 모델 티어 선택 -->
+                    <div class="form-group">
+                        <label>AI 모델 티어</label>
+                        <div class="tier-selection">
+                            <div class="tier-option selected" id="llmTier" onclick="selectTier('llm')">
+                                <div
+                                    style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                                    <input type="radio" name="modelTier" value="llm" checked
+                                        style="margin-right: 0.5rem;">
+                                    <span class="tier-name">LLM (정밀 분석)</span>
+                                </div>
+                                <div class="tier-model">Qwen3-4B (권장)</div>
+                            </div>
+                            <div class="tier-option" id="slmTier" onclick="selectTier('slm')">
+                                <div
+                                    style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                                    <input type="radio" name="modelTier" value="slm" style="margin-right: 0.5rem;">
+                                    <span class="tier-name">SLM (실시간 처리)</span>
+                                </div>
+                                <div class="tier-model">Qwen3-1.7B (빠름)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 모델 비교 모드 -->
+                <div id="compareAnalysisOptions" style="display: none;">
+                    <!-- 비교 티어 선택 -->
+                    <div class="form-group">
+                        <label>비교할 모델 티어</label>
+                        <div class="analysis-mode-selector">
+                            <div class="mode-option active" id="compareLLMMode" onclick="selectComparisonTier('llm')">
+                                <div
+                                    style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                                    <input type="radio" name="comparisonTier" value="llm" checked
+                                        style="margin-right: 0.5rem;">
+                                    <span class="tier-name">LLM 모델 비교</span>
+                                </div>
+                                <div class="tier-model">정밀 분석 모델들 (요약+카테고리+제목)</div>
+                            </div>
+                            <div class="mode-option" id="compareSLMMode" onclick="selectComparisonTier('slm')">
+                                <div
+                                    style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                                    <input type="radio" name="comparisonTier" value="slm" style="margin-right: 0.5rem;">
+                                    <span class="tier-name">SLM 모델 비교</span>
+                                </div>
+                                <div class="tier-model">실시간 처리 모델들 (요약만)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LLM 모델 비교 옵션 -->
+                    <div id="llmCompareOptions">
+                        <div class="form-group">
+                            <label>비교할 LLM 모델 선택 (정밀 분석용)</label>
+                            <div class="model-compare-options">
+                                <label class="model-checkbox">
+                                    <input type="checkbox" id="compareQwen3_4b" value="qwen3_4b" checked>
+                                    <span>Qwen3-4B</span>
+                                    <small>메인 모델 (검증된 안정성)</small>
+                                </label>
+                                <label class="model-checkbox">
+                                    <input type="checkbox" id="compareAX_4b" value="ax_light">
+                                    <span>A.X-4.0-Light</span>
+                                    <small>SKT 효율성 중심</small>
+                                </label>
+                                <label class="model-checkbox">
+                                    <input type="checkbox" id="compareMidm_base" value="midm_base">
+                                    <span>Midm-2.0-Base</span>
+                                    <small>호환성 중심</small>
+                                </label>
+                            </div>
+                            <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+                                📊 LLM 비교: 요약 품질, 카테고리 정확도, 제목 생성 능력을 종합 비교합니다.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- SLM 모델 비교 옵션 -->
+                    <div id="slmCompareOptions" style="display: none;">
+                        <div class="form-group">
+                            <label>비교할 SLM 모델 선택 (실시간 처리용)</label>
+                            <div class="model-compare-options">
+                                <label class="model-checkbox">
+                                    <input type="checkbox" id="compareQwen3_1_7b" value="qwen3_1_7b" checked>
+                                    <span>Qwen3-1.7B</span>
+                                    <small>실시간 처리 (권장)</small>
+                                </label>
+                                <label class="model-checkbox">
+                                    <input type="checkbox" id="compareMidm_mini" value="midm_mini">
+                                    <span>Midm-2.0-Mini</span>
+                                    <small>초고속 처리</small>
+                                </label>
+                            </div>
+                            <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
+                                ⚡ SLM 비교: 실시간 요약 속도와 품질을 중심으로 비교합니다 (카테고리/제목 제외).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLM 모델 선택 -->
+                <div class="form-group model-selection" id="slmModelSelection" style="display: none;">
+                    <label>SLM 모델 선택</label>
+                    <select id="slmModelSelect">
+                        <option value="qwen3">Qwen3-1.7B (권장)</option>
+                        <option value="midm">Midm-2.0-Mini</option>
+                        <option value="both">모든 테스트</option>
+                    </select>
+                </div>
+
+                <!-- LLM 모델 선택 -->
+                <div class="form-group model-selection" id="llmModelSelection">
+                    <label>LLM 모델 선택</label>
+                    <select id="llmModelSelect">
+                        <option value="qwen3_4b">Qwen3-4B-Instruct-2507 (권장)</option>
+                        <option value="midm_base">Midm-2.0-Base-Instruct</option>
+                        <option value="ax_light">A.X-4.0-Light</option>
+                    </select>
+                </div>
+
+                <!-- 분석 옵션 -->
+                <div class="form-group">
+                    <label>분석 옵션</label>
+                    <div class="feature-options">
+                        <label>
+                            <input type="checkbox" id="includeSummary" checked>
+                            요약 생성
+                        </label>
+                        <label>
+                            <input type="checkbox" id="includeCategory" checked>
+                            카테고리 추천
+                        </label>
+                        <label>
+                            <input type="checkbox" id="includeTitle" checked>
+                            제목 생성
+                        </label>
+                    </div>
+                    <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
+                        SLM 모드에서는 요약만 생성됩니다.
+                    </p>
+                </div>
+
+                <!-- 분석 버튼들 -->
+                <div class="action-buttons">
+                    <!-- 단일 분석 버튼 -->
+                    <div id="singleAnalysisButtons">
+                        <button class="analyze-btn" id="analyzeBtn" onclick="analyzeConsultation()">
+                            AI 분석 시작
+                        </button>
+                    </div>
+
+                    <!-- 모델 비교 버튼 -->
+                    <div id="compareAnalysisButtons" style="display: none;">
+                        <button class="analyze-btn" id="compareBtn" onclick="compareModels()"
+                            style="background: linear-gradient(135deg, #ff9800, #ff5722);">
+                            모델 성능 비교 시작
+                        </button>
+                    </div>
+
+                    <!-- 공통 버튼들 -->
+                    <button class="clear-btn" onclick="clearResults()">
+                        결과 초기화
+                    </button>
+                    <button class="clear-btn" onclick="emergencyReset()"
+                        style="background: #dc3545; margin-left: 0.5rem;" title="로딩 중 멈춘 경우 사용">
+                        시스템 초기화
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔹 분석 결과</h2>
+
+                <div id="analysisStatus"
+                    style="height: 50vh; min-height: 300px; display: flex; align-items: center; justify-content: center;">
+                    <div
+                        style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                        <p style="color: #666; margin: 0;">AI 분석 대기 중...</p>
+                    </div>
+                </div>
+
+                <div class="result-section" id="resultSection" style="display: none;">
+                    <div id="resultBadge" class="result-badge success">완료</div>
+
+                    <div>
+                        <h4>📄 요약</h4>
+                        <div id="summaryResult"
+                            style="background: white; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;"></div>
+                    </div>
+
+                    <div>
+                        <h4>🏷️ 추천 카테고리</h4>
+                        <div id="categoryResult"
+                            style="background: white; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;"></div>
+                    </div>
+
+                    <div>
+                        <h4>📋 생성된 제목</h4>
+                        <ul id="titleResult" class="title-list" style="margin-bottom: 1rem;"></ul>
+                    </div>
+
+                    <div>
+                        <h4>⏱️ 처리 정보</h4>
+                        <div id="metadataResult"
+                            style="background: white; padding: 1rem; border-radius: 5px; font-size: 0.9rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 모델 비교 결과 (전체 컨테이너 폭 사용) -->
+        <div class="card" id="comparisonResultsCard" style="display: none; margin-top: 2rem;">
+            <h2>모델 성능 비교 결과</h2>
+
+            <div id="comparisonStatus">
+                <div
+                    style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 200px;">
+                    <p style="color: #666; margin: 0;">모델 비교 분석 대기 중...</p>
+                </div>
+            </div>
+
+            <div class="comparison-results" id="comparisonResults" style="display: none;">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>모델</th>
+                            <th>처리시간</th>
+                            <th>요약 (3줄 구조)</th>
+                            <th>카테고리</th>
+                            <th>제목</th>
+                            <th>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparisonTableBody">
+                        <!-- 비교 결과가 여기에 표시됩니다 -->
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedTier = 'llm';
+        let selectedAnalysisMode = 'single';
+
+        // 페이지 로드 시 초기화
+        window.onload = function () {
+            setupTierSelection();
+            checkSystemStatus();
+            setInterval(checkSystemStatus, 30000); // 30초마다 상태 확인
+        };
+
+        // 분석 모드 선택
+        function selectAnalysisMode(mode) {
+            selectedAnalysisMode = mode;
+
+            // 라디오 버튼 업데이트
+            document.querySelectorAll('input[name="analysisMode"]').forEach(radio => {
+                radio.checked = radio.value === mode;
+            });
+
+            // 모드 옵션 시각적 업데이트
+            document.querySelectorAll('.mode-option').forEach(el => el.classList.remove('active'));
+            document.getElementById(mode + 'Mode').classList.add('active');
+
+            // UI 영역 표시/숨김
+            if (mode === 'single') {
+                document.getElementById('singleAnalysisOptions').style.display = 'block';
+                document.getElementById('compareAnalysisOptions').style.display = 'none';
+                document.getElementById('singleAnalysisButtons').style.display = 'block';
+                document.getElementById('compareAnalysisButtons').style.display = 'none';
+                document.getElementById('comparisonResultsCard').style.display = 'none';
+            } else {
+                document.getElementById('singleAnalysisOptions').style.display = 'none';
+                document.getElementById('compareAnalysisOptions').style.display = 'block';
+                document.getElementById('singleAnalysisButtons').style.display = 'none';
+                document.getElementById('compareAnalysisButtons').style.display = 'block';
+                // LLM 모델 선택 UI 숨김 (모델 성능 비교 모드에서는 불필요)
+                document.getElementById('llmModelSelection').style.display = 'none';
+                // 결과 카드는 비교 시작 시 표시
+            }
+
+            console.log('분석 모드 변경:', mode);
+        }
+
+        // 비교 티어 선택 (LLM vs SLM)
+        function selectComparisonTier(tier) {
+            // 라디오 버튼 업데이트
+            document.querySelectorAll('input[name="comparisonTier"]').forEach(radio => {
+                radio.checked = radio.value === tier;
+            });
+
+            // 티어 옵션 시각적 업데이트
+            document.querySelectorAll('#compareAnalysisOptions .mode-option').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById('compare' + tier.toUpperCase() + 'Mode').classList.add('active');
+
+            // 모델 선택 옵션 표시/숨김
+            if (tier === 'llm') {
+                document.getElementById('llmCompareOptions').style.display = 'block';
+                document.getElementById('slmCompareOptions').style.display = 'none';
+            } else {
+                document.getElementById('llmCompareOptions').style.display = 'none';
+                document.getElementById('slmCompareOptions').style.display = 'block';
+            }
+
+            console.log('비교 티어 변경:', tier);
+        }
+
+        // 티어 선택 초기 설정
+        function setupTierSelection() {
+            handleTierChange();
+        }
+
+        // 티어 선택 처리
+        function handleTierChange() {
+            const selectedRadio = document.querySelector('input[name="modelTier"]:checked');
+            if (selectedRadio) {
+                selectedTier = selectedRadio.value;
+
+                if (selectedTier === 'slm') {
+                    // SLM 모드: 카테고리와 제목 체크박스 비활성화
+                    document.getElementById('includeCategory').checked = false;
+                    document.getElementById('includeCategory').disabled = true;
+                    document.getElementById('includeTitle').checked = false;
+                    document.getElementById('includeTitle').disabled = true;
+
+                    // 요약은 항상 체크되어 있어야 함
+                    document.getElementById('includeSummary').checked = true;
+
+                    // SLM 모델 선택 표시
+                    document.getElementById('slmModelSelection').style.display = 'block';
+                    document.getElementById('llmModelSelection').style.display = 'none';
+
+                    // 분석 버튼 텍스트 변경
+                    const analyzeBtn = document.getElementById('analyzeBtn');
+                    analyzeBtn.innerHTML = 'SLM 분석';
+                } else {
+                    // LLM 모드: 모든 체크박스 활성화
+                    document.getElementById('includeCategory').disabled = false;
+                    document.getElementById('includeTitle').disabled = false;
+
+                    // SLM 모델 선택 숨김
+                    document.getElementById('slmModelSelection').style.display = 'none';
+                    document.getElementById('llmModelSelection').style.display = 'block';
+
+                    // 분석 버튼 텍스트 변경
+                    const analyzeBtn = document.getElementById('analyzeBtn');
+                    analyzeBtn.innerHTML = 'LLM 분석 시작';
+                }
+            }
+        }
+
+        // 티어 선택
+        function selectTier(tier) {
+            selectedTier = tier;
+            document.querySelectorAll('.tier-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById(tier + 'Tier').classList.add('selected');
+            document.querySelector(`input[name="modelTier"][value="${tier}"]`).checked = true;
+            handleTierChange();
+        }
+
+        // 시스템 상태 확인
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/api/v1/consultation/status');
+                const data = await response.json();
+
+                console.log('🔍 [시스템 상태 응답]', data);
+
+                // 서비스 초기화 상태
+                const serviceInitialized = data.service_initialized || false;
+                const aiAnalyzerStatus = data.ai_analyzer_status || {};
+
+                document.getElementById('statusValue').textContent =
+                    serviceInitialized ? '🟢 정상' :
+                        data.status === 'healthy' ? '🟢 정상' :
+                            data.status === 'uninitialized' ? '🔴 초기화 필요' : '🔴 오류발생';
+
+                document.getElementById('processedCount').textContent =
+                    data.statistics?.processed_consultations || 0;
+                document.getElementById('avgProcessingTime').textContent =
+                    data.statistics?.average_processing_time ?
+                        `${data.statistics.average_processing_time.toFixed(2)}초` : '-';
+
+                // 모델 상태 확인 - 다양한 필드 확인
+                let modelLoaded = false;
+                if (aiAnalyzerStatus.model_loaded) {
+                    modelLoaded = true;
+                } else if (data.model_loaded) {
+                    modelLoaded = true;
+                } else if (aiAnalyzerStatus.qwen_summarizer) {
+                    modelLoaded = true;
+                }
+
+                document.getElementById('modelStatus').textContent =
+                    modelLoaded ? '🟢 로드됨' : '🔴 미로드';
+
+            } catch (error) {
+                console.error('상태 확인 실패:', error);
+                document.getElementById('statusValue').textContent = '🔴 연결불가';
+                document.getElementById('processedCount').textContent = '-';
+                document.getElementById('avgProcessingTime').textContent = '-';
+                document.getElementById('modelStatus').textContent = '🔴 연결불가';
+            }
+        }
+
+        // 파일 업로드 처리
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 파일 크기 체크 (10MB 제한)
+            if (file.size > 10 * 1024 * 1024) {
+                showMessage('파일 크기가 너무 큽니다. 10MB 이하의 파일을 선택해주세요.', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            const uploadBtn = document.querySelector('.upload-btn');
+            uploadBtn.innerHTML = '<span class="btn-icon">⏳</span>업로드 중...';
+            uploadBtn.disabled = true;
+
+            reader.onload = function (e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+
+                    // JSON 데이터 유효성 검사 (최소한의 필수 필드 확인)
+                    if (!jsonData.conversation_text && !jsonData.details && !jsonData.segments && !jsonData.utterances) {
+                        throw new Error('올바른 상담 데이터 형식이 아닙니다. conversation_text, details, segments 또는 utterances 중 하나가 있어야 합니다.');
+                    }
+
+                    // 데이터 로드 (파일명 포함)
+                    loadJsonData(jsonData, file.name);
+                    showMessage('JSON 파일이 성공적으로 업로드되었습니다!', 'success');
+
+                } catch (error) {
+                    console.error('JSON 파싱 오류:', error);
+                    showMessage('JSON 파일 형식이 올바르지 않습니다.', 'error');
+                }
+
+                // 버튼 상태 초기화
+                uploadBtn.innerHTML = '<span class="btn-icon">📁</span>브라우저 파일 업로드';
+                uploadBtn.disabled = false;
+
+            };
+
+            reader.onerror = function () {
+                showMessage('파일 읽기 도중에 오류가 발생했습니다.', 'error');
+                uploadBtn.innerHTML = '<span class="btn-icon">📁</span>브라우저 파일 업로드';
+                uploadBtn.disabled = false;
+            };
+
+            reader.readAsText(file);
+        }
+
+        // JSON 데이터 로드 및 UI 업데이트
+        function loadJsonData(data, uploadedFileName = null) {
+            // 상담 ID 추출
+            let consultationId = data.consultation_id || data.id || '';
+            if (!consultationId && data.file_name) {
+                consultationId = data.file_name.replace('.json', '');
+            }
+
+            // 파일명 설정 (업로드된 파일명 우선)
+            const fileName = uploadedFileName || data.file_name || data.filename || 'unknown.json';
+
+            // 상담 내용 추출
+            let consultationContent = data.consultation_content || data.summary || '';
+
+            // STT 통화 데이터 추출
+            let sttData = '';
+            if (data.conversation_text) {
+                // details 배열에서 통화 내용 구성
+                sttData = data.conversation_text;
+            } else if (data.details && Array.isArray(data.details)) {
+                data.details.forEach((detail, index) => {
+                    if (detail.text) {
+                        let speaker = '미분류';
+                        if (detail.senderType === '상담사' || detail.senderType === 'agent') {
+                            speaker = '상담사';
+                        } else if (detail.senderType === '고객' || detail.senderType === 'customer') {
+                            speaker = '고객';
+                        } else {
+                            speaker = detail.senderType; // 기타 화자는 원래 이름 사용
+                        }
+                        sttData += `${speaker}: ${detail.text}\n`;
+                    }
+                });
+            } else if (data.raw_call_data && data.raw_call_data.details && Array.isArray(data.raw_call_data.details)) {
+                // raw_call_data.details 배열에서 통화 내용 구성
+                data.raw_call_data.details.forEach((detail, index) => {
+                    if (detail.text) {
+                        let speaker = '미분류';
+                        if (detail.senderType === '상담사' || detail.senderType === 'agent') {
+                            speaker = '상담사';
+                        } else if (detail.senderType === '고객' || detail.senderType === 'customer') {
+                            speaker = '고객';
+                        } else {
+                            speaker = detail.senderType; // 기타 화자는 원래 이름 사용
+                        }
+                        sttData += `${speaker}: ${detail.text}\n`;
+                    }
+                });
+            } else if (data.segments && Array.isArray(data.segments)) {
+                // segments 배열에서 통화 내용 (WhisperX 형식)
+                data.segments.forEach((segment, index) => {
+                    if (segment.text) {
+                        let speaker = '미분류';
+                        if (segment.speaker === 'agent' || segment.speaker === '상담사') {
+                            speaker = '상담사';
+                        } else if (segment.speaker === 'customer' || segment.speaker === '고객') {
+                            speaker = '고객';
+                        } else {
+                            speaker = `화자${segment.speaker || index + 1}`;
+                        }
+                        sttData += `${speaker}: ${segment.text}\n`;
+                    }
+                });
+            } else if (data.utterances && Array.isArray(data.utterances)) {
+                // utterances 배열에서 통화 내용
+                data.utterances.forEach((utterance, index) => {
+                    if (utterance.text) {
+                        let speaker = '미분류';
+                        if (utterance.speaker === 'agent' || utterance.speaker === '상담사') {
+                            speaker = '상담사';
+                        } else if (utterance.speaker === 'customer' || utterance.speaker === '고객') {
+                            speaker = '고객';
+                        } else {
+                            speaker = `화자${utterance.speaker || index + 1}`;
+                        }
+                        sttData += `${speaker}: ${utterance.text}\n`;
+                    }
+                });
+            }
+
+            // UI 업데이트
+            document.getElementById('consultationId').value = consultationId;
+            document.getElementById('fileName').value = fileName;
+            document.getElementById('consultationContent').value = consultationContent;
+            document.getElementById('sttData').value = sttData.trim();
+        }
+
+        // 테스트 데이터 로드
+        async function loadTestData() {
+            try {
+                // 버튼을 로딩 상태로 변경
+                const button = document.querySelector('.random-btn');
+                const originalHtml = button.innerHTML;
+                button.innerHTML = '<span class="btn-icon">⏳</span>로드 중...';
+                button.disabled = true;
+
+                // 랜덤 통화 데이터를 API에서 로드 (실제 call_data)
+                const apiUrl = window.location.origin + '/api/v1/consultation/test-data';
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                // 응답 상태 확인
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const data = result.data;
+
+                    // 폼에 데이터 설정하여 업로드
+                    document.getElementById('consultationId').value = data.consultation_id;
+                    document.getElementById('fileName').value = data.file_name || 'unknown.json';
+                    document.getElementById('consultationContent').value = data.consultation_content;
+                    document.getElementById('sttData').value = data.conversation_text;
+
+                    // 성공 메시지 표시
+                    showMessage(`랜덤 통화 데이터 로드: ${data.file_name}`, 'success');
+
+                    // 추가 정보 표시
+                    // 통화시간을 분:초 형식으로 변환
+                    const totalSeconds = data.duration || 0;
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+                    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'test-data-info';
+                    infoDiv.innerHTML = `
+                        <small style="color: #666; display: block; margin-top: 0.5rem;">
+                            📄 파일: ${data.file_name} |
+                            ⏱️ 통화시간: ${formattedTime} |
+                            📂 분류: ${data.category}
+                        </small>
+                    `;
+
+                    // 기존 정보 삭제 후 새로 추가
+                    const existingInfo = document.querySelector('.test-data-info');
+                    if (existingInfo) existingInfo.remove();
+
+                    const sttLabel = document.querySelector('label[for="sttData"]');
+                    sttLabel.insertAdjacentElement('afterend', infoDiv);
+
+                } else {
+                    showMessage('테스트 데이터 로드 실패', 'error');
+                }
+
+                // 버튼 원래 상태로 복원
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+
+            } catch (error) {
+                console.error('테스트 데이터 로드 오류:', error);
+
+                // 사용자 친화적 오류 표시
+                let errorMessage = '테스트 데이터 로드 중 오류 발생';
+                if (error.message) {
+                    errorMessage += `: ${error.message}`;
+                }
+
+                // 네트워크 오류 및 환경 정보 추가
+                if (!navigator.onLine) {
+                    errorMessage += ' (인터넷 연결 확인 필요)';
+                }
+
+                showMessage(errorMessage, 'error');
+
+                // 디버깅용 정보 및 로그
+                console.log('=== 테스트 데이터 로드 실패시 정보 ===');
+                console.log('현재 URL:', window.location.href);
+                console.log('API URL:', window.location.origin + '/api/v1/consultation/test-data');
+                console.log('User Agent:', navigator.userAgent);
+                console.log('브라우저 온라인:', navigator.onLine);
+                console.log('오류 정보:', error);
+
+                // 버튼 원래 상태로 복원
+                const button = document.querySelector('.random-btn');
+                if (button) {
+                    button.innerHTML = '<span class="btn-icon">🎲</span>랜덤 데이터 로드';
+                    button.disabled = false;
+                }
+            }
+        }
+
+        // 메시지 표시
+        function showMessage(message, type) {
+            // 기존 메시지 제거
+            const existingMessage = document.querySelector('.message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            // 새 메시지 생성
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+
+            // 3초 후 자동 제거
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 3000);
+        }
+
+        // 모델 로딩 중 UI 표시 (도트 애니메이션)
+        function showModelLoadingSpinner() {
+            const analysisStatus = document.getElementById('analysisStatus');
+            const resultSection = document.getElementById('resultSection');
+
+            // 결과 섹션 숨기기
+            resultSection.style.display = 'none';
+
+            // 분석 상태 영역을 뷰포트 높이의 50%로 설정
+            const viewportHeight = window.innerHeight;
+            const availableHeight = Math.max(viewportHeight * 0.5, 300); // 최소 300px 보장
+
+            // 분석 상태 영역 스타일 설정
+            analysisStatus.style.display = 'flex';
+            analysisStatus.style.height = availableHeight + 'px';
+            analysisStatus.style.alignItems = 'center';
+            analysisStatus.style.justifyContent = 'center';
+            analysisStatus.style.position = 'relative';
+
+            // 도트 애니메이션 (단일 스타일)
+            const loadingHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <div class="loading-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                    <p style="color: #ff9800; font-weight: 500; margin: 0;">AI 모델 로딩 중</p>
+                    <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">모델을 메모리에 로드하고 있습니다</p>
+                </div>
+            `;
+
+            analysisStatus.innerHTML = loadingHTML;
+            console.log('모델 로딩 UI 표시 (도트) - 높이:', availableHeight + 'px');
+        }
+
+        // AI 분석 중 스피너 표시 (체크된 옵션에 따른 동적 텍스트)
+        function showAnalysisSpinner() {
+            const analysisStatus = document.getElementById('analysisStatus');
+
+            // 체크된 분석 옵션 확인
+            const checkedOptions = [];
+            if (document.getElementById('includeSummary').checked) {
+                checkedOptions.push('요약');
+            }
+            if (document.getElementById('includeCategory').checked) {
+                checkedOptions.push('카테고리');
+            }
+            if (document.getElementById('includeTitle').checked) {
+                checkedOptions.push('제목');
+            }
+
+            // 동적 가이드 텍스트 생성
+            let guideText = '';
+            if (checkedOptions.length === 0) {
+                guideText = '분석을 진행하고 있습니다';
+            } else if (checkedOptions.length === 1) {
+                guideText = `${checkedOptions[0]}을 생성하고 있습니다`;
+            } else if (checkedOptions.length === 2) {
+                guideText = `${checkedOptions.join(', ')}을 생성하고 있습니다`;
+            } else {
+                guideText = `${checkedOptions.slice(0, -1).join(', ')}, ${checkedOptions[checkedOptions.length - 1]}을 생성하고 있습니다`;
+            }
+
+            // 기존 스타일 유지하고 내용만 변경
+            analysisStatus.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <div class="spinner" style="margin-bottom: 1rem;"></div>
+                    <p style="color: #667eea; font-weight: 500; margin: 0;">AI 분석 진행 중...</p>
+                    <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">${guideText}</p>
+                </div>
+            `;
+
+            console.log('AI 분석 스피너 표시 - 옵션:', checkedOptions.join(', '), '텍스트:', guideText);
+        }
+
+        // 기존 함수 호환성 유지 (AI 분석 스피너로 리다이렉트)
+        function showCenteredSpinner() {
+            showAnalysisSpinner();
+        }
+
+        // 모델 상태 확인 및 로딩 진행 표시
+        async function checkModelStatusAndShowProgress(modelTier) {
+            try {
+                // 1단계: 모델 로딩 상태 표시 (2-3초간)
+                console.log(`[단계 1] ${modelTier.toUpperCase()} 모델 로딩 시작`);
+
+                // 도트 애니메이션 표시
+                showModelLoadingSpinner();
+
+                // 모델 로딩 시뮬레이션 (실제로는 시스템 상태 API 호출)
+                await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000)); // 2-3초
+
+                // 2단계: AI 분석 단계로 전환
+                console.log(`[단계 2] ${modelTier.toUpperCase()} 모델 로딩 완료, AI 분석 시작`);
+                showAnalysisSpinner();
+
+                // 추가적으로 실제 모델 상태 확인 (선택사항)
+                // const statusResponse = await fetch('/api/v1/consultation/status');
+                // const statusData = await statusResponse.json();
+                // console.log('모델 상태:', statusData);
+
+            } catch (error) {
+                console.error('모델 상태 확인 실패:', error);
+                // 에러가 있어도 분석 단계로 진행
+                showAnalysisSpinner();
+            }
+        }
+
+        // 테스트용: 로딩 애니메이션 미리보기
+        function previewLoadingStyle() {
+            showModelLoadingSpinner();
+            setTimeout(() => {
+                showAnalysisSpinner();
+            }, 3000);
+        }
+
+        // 테스트용: 동적 텍스트 미리보기
+        function previewDynamicText() {
+            console.log('=== 동적 텍스트 테스트 ===');
+            console.log('요약만 체크:', document.getElementById('includeSummary').checked);
+            console.log('카테고리만 체크:', document.getElementById('includeCategory').checked);
+            console.log('제목만 체크:', document.getElementById('includeTitle').checked);
+            showAnalysisSpinner();
+        }
+
+        // 강제 시스템 초기화 (GPU 메모리 완전 정리)
+        async function emergencyReset() {
+            console.log('🚨 강제 시스템 초기화 실행');
+
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const analysisStatus = document.getElementById('analysisStatus');
+            const resultSection = document.getElementById('resultSection');
+
+            try {
+                // 1. UI 상태 초기화
+                if (analyzeBtn) {
+                    analyzeBtn.disabled = true;
+                    analyzeBtn.textContent = '시스템 초기화 중...';
+                }
+
+                // 2. 초기화 중 표시
+                resultSection.style.display = 'none';
+                analysisStatus.style.display = 'flex';
+                analysisStatus.style.height = '300px';
+                analysisStatus.style.alignItems = 'center';
+                analysisStatus.style.justifyContent = 'center';
+
+                analysisStatus.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                        <div class="spinner" style="margin-bottom: 1rem;"></div>
+                        <p style="color: #dc3545; font-weight: 500; margin: 0;">시스템 강제 초기화 중...</p>
+                        <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">GPU 메모리를 정리하고 있습니다</p>
+                    </div>
+                `;
+
+                // 3. 서버에 강제 리셋 요청
+                console.log('서버 강제 리셋 API 호출 중...');
+
+                const response = await fetch('/api/v1/consultation/force-reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ 서버 강제 리셋 성공:', result);
+
+                    // 4. 성공 표시
+                    analysisStatus.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                            <p style="color: #28a745; font-weight: 500; margin: 0;">✅ 시스템 초기화 완료</p>
+                            <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">다음 분석 시 모델이 새로 로드됩니다</p>
+                        </div>
+                    `;
+
+                    showMessage('시스템이 완전히 초기화되었습니다. GPU 메모리 문제가 해결되었습니다.', 'success');
+                } else {
+                    throw new Error(`서버 리셋 실패: ${response.status} ${response.statusText}`);
+                }
+
+            } catch (error) {
+                console.error('강제 초기화 실패:', error);
+
+                // 5. 실패 시에도 UI는 복구
+                analysisStatus.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                        <p style="color: #dc3545; margin: 0;">❌ 시스템 초기화 실패</p>
+                        <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">서버를 재시작해주세요</p>
+                    </div>
+                `;
+
+                showMessage('시스템 초기화에 실패했습니다. 서버를 재시작해주세요.', 'error');
+            } finally {
+                // 6. 버튼 상태 복원
+                if (analyzeBtn) {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.textContent = 'LLM 분석 시작';
+                }
+
+                // 자동 복구 타임아웃 해제
+                clearLoadingTimeout();
+            }
+        }
+
+        // 로딩 상태 감지 및 자동 복구 (60초 후)
+        let loadingTimeoutId = null;
+        function startLoadingTimeout() {
+            clearTimeout(loadingTimeoutId);
+            loadingTimeoutId = setTimeout(() => {
+                console.warn('⚠️ 로딩 상태가 60초 이상 지속됨. 자동 복구 제안');
+
+                if (confirm('분석이 너무 오래 걸리고 있습니다. 시스템을 복구하시겠습니까?')) {
+                    emergencyReset();
+                }
+            }, 60000); // 60초
+        }
+
+        function clearLoadingTimeout() {
+            clearTimeout(loadingTimeoutId);
+            loadingTimeoutId = null;
+        }
+
+        // 상담 분석 시작
+        async function analyzeConsultation() {
+            const sttData = document.getElementById('sttData').value.trim();
+            if (!sttData) {
+                showMessage('STT 통화 데이터를 입력해주세요.', 'error');
+                return;
+            }
+
+            // 선택된 티어 확인 (기본값 설정)
+            const selectedRadio = document.querySelector('input[name="modelTier"]:checked');
+            const modelTier = selectedRadio ? selectedRadio.value : 'llm';
+
+            // 분석 버튼 비활성화 (중복 클릭 방지)
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const originalText = analyzeBtn.textContent;
+            analyzeBtn.disabled = true;
+
+            // 선택된 티어 기반 버튼 텍스트 변경
+            if (modelTier === 'slm') {
+                analyzeBtn.textContent = 'SLM 분석 중';
+            } else {
+                analyzeBtn.textContent = 'LLM 분석 중';
+            }
+
+            // 1단계: 모델 로딩 상태 확인 및 표시
+            startLoadingTimeout(); // 자동 복구 타임아웃 시작
+            await checkModelStatusAndShowProgress(modelTier);
+
+            const consultationContent = document.getElementById('consultationContent').value.trim() || '상담 내용';
+
+            try {
+                const consultationId = document.getElementById('consultationId').value || `consultation_${Date.now()}`;
+
+                const requestData = {
+                    consultation_id: consultationId,
+                    consultation_content: sttData, // Use sttData as consultation_content (required field)
+                    stt_data: {
+                        conversation_text: sttData,
+                        raw_data: null,
+                        segments: null,
+                        utterances: null
+                    },
+                    ai_tier: modelTier,  // 'slm' or 'llm'
+                    consultation_category_name: null,
+                    consultation_category_code: null,
+                    existing_title: null,
+                    options: {
+                        include_summary: true,
+                        include_category_recommendation: true,
+                        include_title_generation: true,
+                        max_summary_length: 300
+                    }
+                };
+
+                // 모델 티어별 옵션 설정
+                let selectedModelName = '';
+                if (modelTier === 'slm') {
+                    // SLM에서 요약만 수행
+                    const slmModel = document.getElementById('slmModelSelect').value;
+                    requestData.slm_model = slmModel;
+                    requestData.options.include_category_recommendation = false;
+                    requestData.options.include_title_generation = false;
+
+                    // SLM 모델명 설정
+                    if (slmModel === 'qwen3') {
+                        selectedModelName = 'Qwen3-1.7B (SLM)';
+                    } else if (slmModel === 'midm') {
+                        selectedModelName = 'Midm-2.0-Mini (SLM)';
+                    } else if (slmModel === 'both') {
+                        selectedModelName = 'Qwen3-1.7B + Midm-2.0-Mini (SLM)';
+                    }
+                } else {
+                    // LLM 기능들
+                    const llmModel = document.getElementById('llmModelSelect').value;
+                    requestData.llm_model = llmModel;
+                    requestData.options.include_summary = document.getElementById('includeSummary').checked;
+                    requestData.options.include_category_recommendation = document.getElementById('includeCategory').checked;
+                    requestData.options.include_title_generation = document.getElementById('includeTitle').checked;
+
+                    // LLM 모델명 설정
+                    if (llmModel === 'qwen3_4b') {
+                        selectedModelName = 'Qwen3-4B-Instruct-2507 (LLM)';
+                    } else if (llmModel === 'midm_base') {
+                        selectedModelName = 'Midm-2.0-Base-Instruct (LLM)';
+                    } else if (llmModel === 'ax_light') {
+                        selectedModelName = 'A.X-4.0-Light (LLM)';
+                    }
+                }
+
+                console.log(`🚀 [AI 분석 시작] 선택된 모델: ${selectedModelName}`);
+                console.log('📋 [요청 데이터]', requestData);
+
+                // 타임아웃 설정 (LLM 분석은 최대 60초)
+                const timeoutDuration = modelTier === 'slm' ? 15000 : 60000; // SLM: 15초, LLM: 60초
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+
+                const response = await fetch('/api/v1/consultation/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData),
+                    signal: controller.signal
+                });
+
+                // 타임아웃 해제
+                clearTimeout(timeoutId);
+
+                // HTTP 상태 코드 체크
+                if (!response.ok) {
+                    let errorMessage = `서버 오류 (${response.status}: ${response.statusText})`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error || errorData.detail) {
+                            errorMessage = errorData.error || errorData.detail || errorMessage;
+                        }
+                    } catch (e) {
+                        // JSON 파싱 실패 시 기본 메시지 사용
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                console.log('✅ API Response 수신:', result);
+                console.log('📊 응답 상세 분석:');
+                console.log('  - success:', result.success);
+                console.log('  - results 존재:', !!result.results);
+                console.log('  - recommended_categories 개수:', result.results?.recommended_categories?.length || 0);
+                console.log('  - generated_titles 개수:', result.results?.generated_titles?.length || 0);
+                console.log('  - processing_time:', result.metadata?.processing_time || 'N/A');
+
+                if (result.success) {
+                    displayResults(result);
+                    showMessage('AI 분석이 완료되었습니다!', 'success');
+                } else {
+                    console.error('❌ 분석 실패:', result.error);
+                    showError(result.error || '분석에 실패했습니다.');
+                }
+
+            } catch (error) {
+                console.error('분석 실패:', error);
+
+                // 구체적인 에러 메시지 생성
+                let errorMessage = '분석 중 오류가 발생했습니다.';
+
+                let needsForceReset = false;
+
+                if (error.name === 'AbortError') {
+                    errorMessage = `분석 시간이 초과되었습니다 (${timeoutDuration / 1000}초). 더 짧은 텍스트로 시도해보세요.`;
+                } else if (error.message) {
+                    errorMessage = error.message;
+
+                    // GPU 디바이스 에러 감지
+                    if (error.message.includes('device') || error.message.includes('cuda') || error.message.includes('tensor')) {
+                        needsForceReset = true;
+                        errorMessage += '\n\nGPU 메모리 문제가 감지되었습니다. 시스템 초기화를 권장합니다.';
+                    }
+                } else if (!navigator.onLine) {
+                    errorMessage = '인터넷 연결을 확인해주세요.';
+                }
+
+                showError(errorMessage);
+
+                // GPU 문제 감지 시 강제 리셋 제안
+                if (needsForceReset) {
+                    setTimeout(() => {
+                        if (confirm('GPU 메모리 문제가 발생했습니다. 시스템을 강제 초기화하시겠습니까?\n\n초기화하면 모든 모델이 다시 로드되어 문제가 해결됩니다.')) {
+                            emergencyReset();
+                        }
+                    }, 2000); // 2초 후 제안
+                }
+
+                // 디버깅 정보 로그
+                console.log('=== 분석 실패 디버깅 정보 ===');
+                console.log('모델 티어:', modelTier);
+                console.log('선택된 모델:', selectedModelName);
+                console.log('요청 데이터 크기:', JSON.stringify(requestData).length, 'characters');
+                console.log('에러 타입:', error.name);
+                console.log('에러 메시지:', error.message);
+                console.log('네트워크 상태:', navigator.onLine);
+            } finally {
+                // 자동 복구 타임아웃 해제
+                clearLoadingTimeout();
+
+                // UI 상태 복원
+                analyzeBtn.disabled = false;
+
+                // 버튼 텍스트 복원
+                if (modelTier === 'slm') {
+                    analyzeBtn.textContent = 'SLM 분석';
+                } else {
+                    analyzeBtn.textContent = 'LLM 분석 시작';
+                }
+            }
+        }
+
+        // 결과 표시
+        function displayResults(result) {
+            console.log('Displaying results:', result);
+
+            // 상태 숨기고 결과 표시
+            document.getElementById('analysisStatus').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+
+            // 결과 배지
+            document.getElementById('resultBadge').textContent = '완료';
+
+            // 요약 - API 응답 구조에 따라 여러 경로 시도
+            let summaryResult = '';
+            if (result.results && result.results.summary) {
+                summaryResult = result.results.summary;
+            } else if (result.summary) {
+                summaryResult = result.summary;
+            } else if (result.results && result.results.analysis_results && result.results.analysis_results.summary) {
+                summaryResult = result.results.analysis_results.summary;
+            } else {
+                summaryResult = '요약 생성에 실패했습니다.';
+            }
+
+            console.log('Summary result:', summaryResult);
+
+            // 요약을 개행으로 나누어 표시
+            const formattedSummary = summaryResult.replace(/\n/g, '<br>');
+            document.getElementById('summaryResult').innerHTML = formattedSummary;
+
+            // 카테고리
+            const categoryDiv = document.getElementById('categoryResult');
+            categoryDiv.innerHTML = '';
+
+            // 카테고리 데이터 찾기
+            let categories = null;
+            if (result.results && result.results.category_recommendations) {
+                categories = result.results.category_recommendations;
+            } else if (result.categories) {
+                categories = result.categories;
+            } else if (result.results && result.results.recommended_categories) {
+                categories = result.results.recommended_categories;
+            }
+
+            if (categories && categories.length > 0) {
+                // 카테고리 결과를 단순 텍스트로 표시 (디자인 태그 제거)
+                const categoryTexts = categories.map((cat, index) => {
+                    return `${cat.rank || index + 1}순위: ${cat.name || cat.keyword || cat} (${cat.confidence ? (cat.confidence * 100).toFixed(0) + '%' : '100%'})`;
+                });
+                categoryDiv.innerHTML = `<p style="margin: 0; line-height: 1.6; color: #333;">${categoryTexts.join('<br>')}</p>`;
+            } else {
+                categoryDiv.innerHTML = '<p style="color: #666; margin: 0;">카테고리 추천 없음</p>';
+            }
+
+            // 제목
+            const titleList = document.getElementById('titleResult');
+            titleList.innerHTML = '';
+
+            // 제목 데이터 찾기
+            let titles = null;
+            if (result.results && result.results.generated_titles) {
+                titles = result.results.generated_titles;
+            } else if (result.titles) {
+                titles = result.titles;
+            } else if (result.results && result.results.titles) {
+                titles = result.results.titles;
+            }
+
+            if (titles && titles.length > 0) {
+                titles.forEach(title => {
+                    const li = document.createElement('li');
+                    if (typeof title === 'string') {
+                        li.textContent = title;
+                    } else {
+                        li.textContent = title.title || title.text || '제목 없음';
+                    }
+                    titleList.appendChild(li);
+                });
+            } else {
+                titleList.innerHTML = '<li style="color: #666;">생성된 제목 없음</li>';
+            }
+
+            // 처리 정보
+            const consultationId = result.consultation_id || (result.results && result.results.consultation_id) || document.getElementById('consultationId').value || '-';
+            const fileName = (result.results && result.results.file_name) || document.getElementById('fileName').value || '-';
+
+            let processingTime = 0;
+            if (result.metadata && result.metadata.processing_time) {
+                processingTime = result.metadata.processing_time;
+            } else if (result.metadata && result.metadata.processing_time_seconds) {
+                processingTime = result.metadata.processing_time_seconds;
+            } else if (result.processing_time) {
+                processingTime = result.processing_time;
+            }
+
+            let conversationLength = 0;
+            if (result.metadata && result.metadata.conversation_length) {
+                conversationLength = result.metadata.conversation_length;
+            } else {
+                conversationLength = document.getElementById('sttData').value.length;
+            }
+
+            let modelUsed = '';
+            if (result.metadata && result.metadata.model_used) {
+                modelUsed = result.metadata.model_used;
+            } else if (result.metadata && result.metadata.model_info && result.metadata.model_info.ai_model) {
+                modelUsed = result.metadata.model_info.ai_model;
+            } else if (result.model_name) {
+                modelUsed = result.model_name;
+            } else {
+                modelUsed = 'Unknown Model';
+            }
+
+            document.getElementById('metadataResult').innerHTML = `
+                <p>📊 상담 ID: ${consultationId}</p>
+                ${fileName !== '-' ? `<p>📄 파일명: ${fileName}</p>` : ''}
+                <p>⏱️ 처리시간: ${processingTime.toFixed(2)}초</p>
+                <p>💬 통화 길이: ${conversationLength}자</p>
+                <p>🤖 사용 모델: ${modelUsed}</p>
+            `;
+
+            // 결과 업데이트
+            checkSystemStatus();
+        }
+
+        // 모델 성능 비교 분석
+        async function compareModels() {
+            const sttData = document.getElementById('sttData').value.trim();
+            if (!sttData) {
+                showMessage('STT 통화 데이터를 입력해주세요.', 'error');
+                return;
+            }
+
+            // 선택된 비교 티어 확인
+            const selectedComparisonTier = document.querySelector('input[name="comparisonTier"]:checked')?.value || 'llm';
+
+            // 선택된 티어의 모델들만 확인
+            const selectedModels = [];
+            const selectorBase = selectedComparisonTier === 'llm' ? '#llmCompareOptions' : '#slmCompareOptions';
+
+            document.querySelectorAll(`${selectorBase} input[type="checkbox"]:checked`).forEach(checkbox => {
+                selectedModels.push({
+                    id: checkbox.value,
+                    name: checkbox.nextElementSibling.textContent.trim(),
+                    tier: selectedComparisonTier  // 선택된 티어로 통일
+                });
+            });
+
+            console.log(`🔬 ${selectedComparisonTier.toUpperCase()} 모델 비교:`, selectedModels);
+
+            if (selectedModels.length === 0) {
+                showMessage('비교할 모델을 최소 1개 이상 선택해주세요.', 'error');
+                return;
+            }
+
+            console.log('🔬 모델 비교 시작:', selectedModels);
+
+            // UI 상태 업데이트
+            const compareBtn = document.getElementById('compareBtn');
+            const originalText = compareBtn.textContent;
+            compareBtn.disabled = true;
+            compareBtn.textContent = `모델 비교 진행 중... (0/${selectedModels.length})`;
+
+            // 비교 결과 카드 표시
+            document.getElementById('comparisonResultsCard').style.display = 'block';
+            document.getElementById('comparisonStatus').style.display = 'block';
+            document.getElementById('comparisonResults').style.display = 'none';
+
+            // 비교 진행 상태 표시 (티어별 메시지)
+            const tierMessage = selectedComparisonTier === 'llm'
+                ? '정밀 분석 모델들을 비교하고 있습니다 (요약+카테고리+제목)'
+                : '실시간 처리 모델들을 비교하고 있습니다 (요약만)';
+
+            document.getElementById('comparisonStatus').innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 200px;">
+                    <div class="spinner" style="margin-bottom: 1rem;"></div>
+                    <p style="color: #ff9800; font-weight: 500; margin: 0;">🔬 ${selectedComparisonTier.toUpperCase()} 모델 성능 비교 진행 중...</p>
+                    <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">${tierMessage}</p>
+                    <p style="color: #999; font-size: 0.8rem; margin: 0.3rem 0 0 0;">진행: 0/${selectedModels.length}개 완료</p>
+                </div>
+            `;
+
+            const comparisonResults = [];
+
+            try {
+                // 각 모델별 순차 분석
+                for (let i = 0; i < selectedModels.length; i++) {
+                    const model = selectedModels[i];
+
+                    // 진행 상황 업데이트
+                    compareBtn.textContent = `${selectedComparisonTier.toUpperCase()} 비교 진행... (${i + 1}/${selectedModels.length}) - ${model.name}`;
+
+                    // 비교 상태 영역에도 진행 상황 업데이트
+                    const progressInfo = document.querySelector('#comparisonStatus p:last-child');
+                    if (progressInfo) {
+                        progressInfo.textContent = `진행: ${i}/${selectedModels.length}개 완료 - 현재: ${model.name}`;
+                    }
+
+                    console.log(`[${i + 1}/${selectedModels.length}] ${selectedComparisonTier.toUpperCase()} ${model.name} 분석 시작`);
+
+                    const result = await analyzeModelForComparison(sttData, model);
+                    comparisonResults.push(result);
+
+                    console.log(`[${i + 1}/${selectedModels.length}] ${model.name} 분석 완료:`, result);
+                }
+
+                // 비교 결과 표시
+                displayComparisonResults(comparisonResults);
+
+                // 티어별 완료 메시지
+                const completionMessage = selectedComparisonTier === 'llm'
+                    ? `${selectedModels.length}개 LLM 모델 정밀 분석 비교가 완료되었습니다!`
+                    : `${selectedModels.length}개 SLM 모델 실시간 처리 비교가 완료되었습니다!`;
+
+                showMessage(completionMessage, 'success');
+
+            } catch (error) {
+                console.error('모델 비교 실패:', error);
+                document.getElementById('comparisonStatus').innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 200px;">
+                        <p style="color: #dc3545; margin: 0;">❌ 모델 비교 중 오류 발생</p>
+                        <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0 0 0;">${error.message || '알 수 없는 오류'}</p>
+                    </div>
+                `;
+                showMessage('모델 비교 중 오류가 발생했습니다.', 'error');
+            } finally {
+                // 버튼 상태 복원
+                compareBtn.disabled = false;
+                compareBtn.textContent = '🔬 모델 성능 비교 시작';
+            }
+        }
+
+        // 단일 모델 분석 (비교용)
+        async function analyzeModelForComparison(sttData, model) {
+            const start_time = Date.now();
+
+            try {
+                const consultationId = document.getElementById('consultationId').value || `compare_${model.id}_${Date.now()}`;
+
+                const requestData = {
+                    consultation_id: consultationId,
+                    consultation_content: sttData,
+                    stt_data: {
+                        conversation_text: sttData
+                    },
+                    ai_tier: model.tier,
+                    options: {
+                        include_summary: true,
+                        include_category_recommendation: model.tier === 'llm',  // SLM은 요약만
+                        include_title_generation: model.tier === 'llm',         // SLM은 요약만
+                        max_summary_length: model.tier === 'slm' ? 200 : 300   // SLM은 더 짧게
+                    }
+                };
+
+                // 티어별 모델 설정
+                if (model.tier === 'slm') {
+                    requestData.slm_model = model.id === 'qwen3_1_7b' ? 'qwen3' : 'midm';
+                } else {
+                    requestData.llm_model = model.id;
+                }
+
+                // 타임아웃 설정
+                const timeoutDuration = model.tier === 'slm' ? 15000 : 60000;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+
+                const response = await fetch('/api/v1/consultation/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const total_time = (Date.now() - start_time) / 1000;
+
+                return {
+                    model: model,
+                    success: result.success,
+                    total_time: total_time,
+                    processing_time: result.metadata?.processing_time || total_time,
+                    model_used: result.metadata?.model_used || model.name,
+                    summary: result.results?.summary || '',
+                    categories: result.results?.recommended_categories || [],
+                    titles: result.results?.generated_titles || [],
+                    error: result.error
+                };
+
+            } catch (error) {
+                const total_time = (Date.now() - start_time) / 1000;
+
+                return {
+                    model: model,
+                    success: false,
+                    total_time: total_time,
+                    processing_time: total_time,
+                    model_used: model.name + ' (실패)',
+                    summary: '',
+                    categories: [],
+                    titles: [],
+                    error: error.message || '분석 실패'
+                };
+            }
+        }
+
+        // 비교 결과 표시 (티어별 테이블 구조)
+        function displayComparisonResults(results) {
+            document.getElementById('comparisonStatus').style.display = 'none';
+            document.getElementById('comparisonResults').style.display = 'block';
+
+            // 비교 티어 확인
+            const comparisonTier = results.length > 0 ? results[0].model.tier : 'llm';
+            const isLLM = comparisonTier === 'llm';
+
+            // 테이블 헤더 동적 생성
+            const comparisonTable = document.querySelector('.comparison-table');
+            const tableHead = comparisonTable.querySelector('thead tr');
+
+            // 테이블 클래스 업데이트
+            comparisonTable.className = `comparison-table ${comparisonTier}-table`;
+
+            if (isLLM) {
+                // LLM: 모든 컬럼 표시
+                tableHead.innerHTML = `
+                    <th style="width: 15%;">모델</th>
+                    <th style="width: 12%;">처리시간</th>
+                    <th style="width: 45%;">요약 (3줄 구조)</th>
+                    <th style="width: 15%;">카테고리</th>
+                    <th style="width: 8%;">제목</th>
+                    <th style="width: 5%;">상태</th>
+                `;
+            } else {
+                // SLM: 카테고리/제목 제외
+                tableHead.innerHTML = `
+                    <th style="width: 18%;">모델</th>
+                    <th style="width: 15%;">처리시간</th>
+                    <th style="width: 62%;">요약 (실시간)</th>
+                    <th style="width: 5%;">상태</th>
+                `;
+            }
+
+            const tbody = document.getElementById('comparisonTableBody');
+            tbody.innerHTML = '';
+
+            // 성능 통계 계산
+            const successfulResults = results.filter(r => r.success);
+            const processingTimes = successfulResults.map(r => r.processing_time);
+
+            // 각 결과를 테이블 행으로 추가
+            results.forEach(result => {
+                const row = document.createElement('tr');
+
+                // 처리시간 배지 색상 결정
+                let timeClass = 'medium';
+                if (result.processing_time < 5) timeClass = 'fast';
+                else if (result.processing_time > 25) timeClass = 'slow';
+                if (result.model_used.includes('캐시')) timeClass = 'cached';
+
+                // 요약 텍스트 (전체 3줄 구조)
+                const summaryFormatted = result.summary.replace(/\n/g, '<br>');
+
+                // 카테고리 요약
+                const categoryText = result.categories.length > 0
+                    ? result.categories.map(c => c.name || c).join(', ')
+                    : '없음';
+
+                // 제목 요약  
+                const titleText = result.titles.length > 0
+                    ? result.titles.map(t => t.title || t).join(', ')
+                    : '없음';
+
+                // 티어별 다른 테이블 행 생성
+                if (isLLM) {
+                    // LLM: 모든 컬럼 표시
+                    row.innerHTML = `
+                        <td><strong>${result.model.name}</strong><br><small>${result.model_used}</small></td>
+                        <td><span class="performance-badge ${timeClass}">${result.processing_time.toFixed(2)}초</span></td>
+                        <td style="white-space: pre-line; font-size: 0.9rem; line-height: 1.4;">${summaryFormatted}</td>
+                        <td title="${categoryText}">${categoryText.length > 30 ? categoryText.substring(0, 30) + '...' : categoryText}</td>
+                        <td title="${titleText}">${titleText.length > 20 ? titleText.substring(0, 20) + '...' : titleText}</td>
+                        <td>${result.success ? '✅ 성공' : '❌ ' + (result.error || '실패')}</td>
+                    `;
+                } else {
+                    // SLM: 카테고리/제목 제외
+                    row.innerHTML = `
+                        <td><strong>${result.model.name}</strong><br><small>${result.model_used}</small></td>
+                        <td><span class="performance-badge ${timeClass}">${result.processing_time.toFixed(2)}초</span></td>
+                        <td style="white-space: pre-line; font-size: 0.9rem; line-height: 1.4;">${summaryFormatted}</td>
+                        <td>${result.success ? '✅ 성공' : '❌ ' + (result.error || '실패')}</td>
+                    `;
+                }
+
+                tbody.appendChild(row);
+            });
+
+        }
+
+
+        // 오류 표시
+        function showError(message) {
+            const analysisStatus = document.getElementById('analysisStatus');
+            const resultSection = document.getElementById('resultSection');
+
+            // 결과 섹션 숨기기
+            resultSection.style.display = 'none';
+
+            // 오류 상태 영역을 뷰포트 높이의 50%로 설정
+            const viewportHeight = window.innerHeight;
+            const availableHeight = Math.max(viewportHeight * 0.5, 300); // 최소 300px 보장
+
+            // 오류 상태 영역 스타일 설정
+            analysisStatus.style.display = 'flex';
+            analysisStatus.style.height = availableHeight + 'px';
+            analysisStatus.style.alignItems = 'center';
+            analysisStatus.style.justifyContent = 'center';
+            analysisStatus.style.position = 'relative';
+
+            // 오류 HTML 설정
+            analysisStatus.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <p style="color: #d32f2f; margin: 0; font-weight: 500;">❌ ${message}</p>
+                </div>
+            `;
+        }
+
+        // 결과 초기화
+        function clearResults() {
+            const analysisStatus = document.getElementById('analysisStatus');
+            const resultSection = document.getElementById('resultSection');
+
+            // 결과 섹션 숨기기
+            resultSection.style.display = 'none';
+
+            // 비교 결과도 숨기기
+            document.getElementById('comparisonResultsCard').style.display = 'none';
+
+            // 분석 상태 영역을 뷰포트 높이의 50%로 설정
+            const viewportHeight = window.innerHeight;
+            const availableHeight = Math.max(viewportHeight * 0.5, 300); // 최소 300px 보장
+
+            // 분석 상태 영역 스타일 설정 (대기 상태)
+            analysisStatus.style.display = 'flex';
+            analysisStatus.style.height = availableHeight + 'px';
+            analysisStatus.style.alignItems = 'center';
+            analysisStatus.style.justifyContent = 'center';
+            analysisStatus.style.position = 'relative';
+
+            // 대기 상태 HTML 설정
+            analysisStatus.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <p style="color: #666; margin: 0;">AI 분석 대기 중...</p>
+                </div>
+            `;
+
+            // 입력 필드들 초기화 (선택적)
+            const confirmClear = confirm('입력 내용도 함께 삭제하시겠습니까?');
+            if (confirmClear) {
+                document.getElementById('consultationId').value = '';
+                document.getElementById('fileName').value = '';
+                document.getElementById('consultationContent').value = '';
+                document.getElementById('sttData').value = '';
+
+                // 테스트 데이터 정보도 제거
+                const testDataInfo = document.querySelector('.test-data-info');
+                if (testDataInfo) testDataInfo.remove();
+
+                showMessage('모든 데이터가 초기화되었습니다.', 'success');
+            } else {
+                showMessage('결과만 초기화되었습니다.', 'success');
+            }
+        }
+
+        // 로컬 파일 브라우저 토글
+        function toggleLocalFileBrowser() {
+            const browser = document.getElementById('localFileBrowser');
+            const isVisible = browser.style.display !== 'none';
+
+            if (isVisible) {
+                browser.style.display = 'none';
+            } else {
+                browser.style.display = 'block';
+                loadLocalFiles(); // 파일 목록 로드
+            }
+        }
+
+        // 로컬 파일 목록 로드
+        async function loadLocalFiles() {
+            const spinner = document.getElementById('fileBrowserSpinner');
+            const status = document.getElementById('fileBrowserStatus');
+            const results = document.getElementById('fileBrowserResults');
+
+            try {
+                spinner.style.display = 'block';
+                status.textContent = '통화 데이터 디렉토리를 로드하고 있습니다...';
+                results.style.display = 'none';
+
+                // 타임아웃 설정 (디렉토리 로드는 10초)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch('/api/v1/consultation/local-files', {
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // HTTP 상태 코드 체크
+                if (!response.ok) {
+                    throw new Error(`디렉토리 로드 실패 (${response.status}: ${response.statusText})`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayDateFolders(data.folders);
+                    results.style.display = 'block';
+                    status.textContent = '';
+                    console.log('로컬 파일 목록 로드 성공:', data.folders.length, '개 폴더');
+                } else {
+                    status.textContent = '파일 목록 로드 실패: ' + (data.error || '알 수 없는 오류');
+                }
+            } catch (error) {
+                console.error('로컬 파일 로드 실패:', error);
+
+                let errorMessage = '파일 목록 로드 중 오류가 발생했습니다.';
+                if (error.name === 'AbortError') {
+                    errorMessage = '디렉토리 로드 시간이 초과되었습니다. 다시 시도해주세요.';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+
+                status.textContent = errorMessage;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        function displayDateFolders(folders) {
+            const container = document.getElementById('dateFolder');
+            container.innerHTML = '';
+
+            if (!folders || folders.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">사용 가능한 날짜 폴더가 없습니다.</p>';
+                return;
+            }
+
+            folders.forEach(folder => {
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'date-folder-item';
+                folderDiv.innerHTML = `
+                    <div class="folder-name">📅 ${folder.date}</div>
+                    <div class="folder-info">${folder.file_count}개 파일</div>
+                `;
+                folderDiv.onclick = () => selectDateFolder(folder.date, folderDiv);
+                container.appendChild(folderDiv);
+            });
+        }
+
+        // 날짜 폴더 업데이트
+        async function selectDateFolder(date, element) {
+            // 선택된 폴더 하이라이트
+            document.querySelectorAll('.date-folder-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+
+            const fileItems = document.getElementById('fileItems');
+
+            try {
+                fileItems.innerHTML = '<div style="text-align: center; padding: 1rem;">파일 목록을 로드하고 있습니다...</div>';
+                document.getElementById('fileList').style.display = 'block';
+
+                const response = await fetch(`/api/v1/consultation/local-files/${date}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log(`Files for date ${date}:`, data);
+
+                if (data.success) {
+                    displayFileList(data.files, date);
+                } else {
+                    const errorMsg = data.error || '파일 목록 로드 실패';
+                    if (data.files && data.files.length === 0) {
+                        fileItems.innerHTML = `<div style="text-align: center; padding: 1rem; color: #666;">이 디렉토리에 파일이 없습니다.</div>`;
+                    } else {
+                        fileItems.innerHTML = `<div style="text-align: center; padding: 1rem; color: #d32f2f;">파일 목록 로드 실패: ${errorMsg}</div>`;
+                    }
+                }
+            } catch (error) {
+                console.error('파일 목록 로드 실패:', error);
+                fileItems.innerHTML = '<div style="text-align: center; padding: 1rem; color: #d32f2f;">파일 목록 로드 중 오류가 발생했습니다.</div>';
+            }
+        }
+
+        function displayFileList(files, date) {
+            const container = document.getElementById('fileItems');
+            container.innerHTML = '';
+
+            if (!files || files.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 1rem; color: #666;">파일이 없습니다.</div>';
+                return;
+            }
+
+            files.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-item';
+
+                // file이 문자열이면 파일명으로, 객체이면 name 속성 사용
+                const filename = typeof file === 'string' ? file : file.name || file.filename || 'unknown';
+
+                fileDiv.innerHTML = `
+                    <span>${filename}</span>
+                    <button class="file-load-btn" onclick="loadLocalFile('${date}', '${filename}')">
+                        로드
+                    </button>
+                `;
+                container.appendChild(fileDiv);
+            });
+        }
+
+        async function loadLocalFile(date, filename) {
+            const loadBtn = event.target;
+            loadBtn.textContent = '로드...';
+            loadBtn.disabled = true;
+
+            try {
+                // 타임아웃 설정 (로컬 파일 로드는 10초)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(`/api/v1/consultation/local-files/${date}/${filename}`, {
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // HTTP 상태 코드 체크
+                if (!response.ok) {
+                    let errorMessage = `파일 로드 실패 (${response.status}: ${response.statusText})`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error || errorData.detail) {
+                            errorMessage = errorData.error || errorData.detail || errorMessage;
+                        }
+                    } catch (e) {
+                        // JSON 파싱 실패 시 기본 메시지 사용
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 파일 데이터를 폼에 로드
+                    loadJsonData(result.data);
+
+                    // 파일 브라우저 닫기
+                    document.getElementById('localFileBrowser').style.display = 'none';
+
+                    showMessage(`로컬 파일이 로드되었습니다: ${filename}`, 'success');
+
+                    // 디버깅 정보
+                    console.log('로컬 파일 로드 성공:', filename);
+                    console.log('로드된 데이터:', result.data);
+                } else {
+                    showMessage('파일 로드 실패: ' + (result.error || '알 수 없는 오류'), 'error');
+                }
+            } catch (error) {
+                console.error('파일 로드 실패:', error);
+
+                let errorMessage = '파일 로드 중 오류가 발생했습니다.';
+                if (error.name === 'AbortError') {
+                    errorMessage = '파일 로드 시간이 초과되었습니다. 다시 시도해주세요.';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+
+                showMessage(errorMessage, 'error');
+            } finally {
+                if (loadBtn) {
+                    loadBtn.textContent = '로드';
+                    loadBtn.disabled = false;
+                }
+            }
+        }
+
+        function refreshLocalFiles() {
+            loadLocalFiles();
+        }
+
+        // 라디오 버튼 변경 이벤트 리스너 추가
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('input[name="modelTier"]').forEach(radio => {
+                radio.addEventListener('change', handleTierChange);
+            });
+        });
+    </script>
+</body>
+
+</html>

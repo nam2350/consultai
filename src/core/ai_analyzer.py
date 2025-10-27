@@ -1,0 +1,463 @@
+﻿"""
+?듯빀 AI 遺꾩꽍湲??ㅼ??ㅽ듃?덉씠??(????곗뼱 吏??
+
+SLM/LLM ????곗뼱 ?꾪궎?띿쿂瑜?吏?먰븯???듯빀 AI 遺꾩꽍湲곗엯?덈떎.
+- SLM: ?ㅼ떆媛??곷떞??吏?먯슜 (?붿빟留? ~3珥?
+- LLM: 諛곗튂 遺꾩꽍??(?꾩쟾 湲곕뒫, ~20珥?
+"""
+import time
+import os
+import logging
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+
+# LLM 紐⑤뜽 而댄룷?뚰듃??- ?숈쟻 ?꾪룷?몃? ?꾪븳 湲곕낯媛?
+from .models.qwen3_4b.summarizer import Qwen2507Summarizer
+from .models.qwen3_4b.classifier import CategoryClassifier
+from .models.qwen3_4b.title_generator import TitleGenerator
+
+# SLM 紐⑤뜽 而댄룷?뚰듃??
+from .models.qwen3_1_7b.summarizer import Qwen3Summarizer
+from .models.midm_mini.summarizer import MidmSummarizer
+
+from .quality_validator import quality_validator
+import hashlib
+
+logger = logging.getLogger(__name__)
+
+class AIAnalyzer:
+    """?듯빀 AI 遺꾩꽍湲??ㅼ??ㅽ듃?덉씠??(????곗뼱 吏??"""
+
+    def __init__(self, model_path: str):
+        """
+        Args:
+            model_path: AI 紐⑤뜽 湲곕낯 寃쎈줈 (LLM??
+        """
+        self.model_path = model_path
+
+        # LLM ?곗뼱 而댄룷?뚰듃??(吏??濡쒕뵫)
+        self.llm_summarizer = None
+        self.category_classifier = None
+        self.title_generator = None
+        self.current_llm_model = None
+
+        # SLM ?곗뼱 而댄룷?뚰듃??(吏??濡쒕뵫)
+        self.slm_qwen3 = None  # Qwen3-1.7B
+        self.slm_midm = None   # Midm-2.0-Mini
+
+        self.model_loaded = False
+        self.slm_models_loaded = {}  # SLM 紐⑤뜽蹂?濡쒕뱶 ?곹깭
+
+        # 罹먯떆 湲곕뒫 鍮꾪솢?깊솕 (?꾨줈?뺤뀡 ?덉젙???곗꽑)
+        self.cache_enabled = False
+    
+    def _load_llm_model(self, model_name: str) -> bool:
+        """LLM 紐⑤뜽 ?숈쟻 濡쒕뵫"""
+        try:
+            # ?대? ?대떦 紐⑤뜽??濡쒕뱶?섏뼱 ?덈떎硫?嫄대꼫?곌린
+            if self.current_llm_model == model_name and self.model_loaded:
+                logger.info(f"[AIAnalyzer] LLM model {model_name} already loaded")
+                return True
+
+            logger.info(f"[AIAnalyzer] start loading LLM model: {model_name}")
+
+            # 湲곗〈 紐⑤뜽 ?뺣━
+            if self.llm_summarizer:
+                del self.llm_summarizer
+                del self.category_classifier
+                del self.title_generator
+                self.llm_summarizer = None
+                self.category_classifier = None
+                self.title_generator = None
+
+            # 紐⑤뜽蹂?濡쒕뵫
+            if model_name == "qwen3_4b":
+                from .models.qwen3_4b.summarizer import Qwen2507Summarizer
+                from .models.qwen3_4b.classifier import CategoryClassifier
+                from .models.qwen3_4b.title_generator import TitleGenerator
+
+                self.llm_summarizer = Qwen2507Summarizer(self.model_path)
+                self.category_classifier = CategoryClassifier(shared_summarizer=self.llm_summarizer)
+                self.title_generator = TitleGenerator(shared_summarizer=self.llm_summarizer)
+
+
+            elif model_name == "midm_base":
+                from .models.midm_base.summarizer import MidmBaseSummarizer
+                from .models.midm_base.classifier import CategoryClassifier
+                from .models.midm_base.title_generator import TitleGenerator
+
+                self.llm_summarizer = MidmBaseSummarizer(self.model_path)
+                self.category_classifier = CategoryClassifier(shared_summarizer=self.llm_summarizer)
+                self.title_generator = TitleGenerator(shared_summarizer=self.llm_summarizer)
+
+            elif model_name == "ax_light":
+                from .models.ax_light.summarizer import AXLightSummarizer
+                from .models.ax_light.classifier import CategoryClassifier
+                from .models.ax_light.title_generator import TitleGenerator
+
+                self.llm_summarizer = AXLightSummarizer(self.model_path)
+                self.category_classifier = CategoryClassifier(shared_summarizer=self.llm_summarizer)
+                self.title_generator = TitleGenerator(shared_summarizer=self.llm_summarizer)
+
+            else:
+                logger.error(f"[AIAnalyzer] unsupported LLM model: {model_name}")
+                return False
+            # 紐⑤뜽 珥덇린??
+            success = self.llm_summarizer.load_model()
+            if success:
+                self.current_llm_model = model_name
+                self.model_loaded = True
+                logger.info(f"[AIAnalyzer] finished loading LLM model: {model_name}")
+            else:
+                logger.error(f"[AIAnalyzer] failed to initialize LLM model: {model_name}")
+                self.model_loaded = False
+
+            return success
+
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] load failure ({model_name}): {e}")
+            self.model_loaded = False
+            return False
+
+    def initialize(self) -> bool:
+        """AI 遺꾩꽍湲?珥덇린??- 湲곕낯 LLM 紐⑤뜽 濡쒕뱶 (qwen3_4b)"""
+        try:
+            logger.info("[AIAnalyzer] initialization sequence started")
+            logger.info(f"[AIAnalyzer] current working directory: {os.getcwd()}")
+
+            # 湲곕낯 LLM 紐⑤뜽 濡쒕뱶 (qwen3_4b)
+            success = self._load_llm_model("qwen3_4b")
+            logger.info(f"[AIAnalyzer] default LLM load result: {success}")
+
+            if success:
+                logger.info("[AIAnalyzer] shared components initialized")
+                logger.info("[AIAnalyzer] summary/classification/title available in single pass")
+                return True
+            else:
+                logger.error("[AIAnalyzer] model load failed")
+                return False
+                
+        except (OSError, IOError) as e:
+            logger.error(f"[AIAnalyzer] model file access error: {e}")
+            return False
+        except (RuntimeError, ImportError) as e:
+            logger.error(f"[AIAnalyzer] model initialization error: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] unexpected initialization failure: {e}")
+            return False
+
+    def _load_slm_model(self, model_name: str) -> bool:
+        """SLM 紐⑤뜽 吏??濡쒕뵫"""
+        try:
+            if model_name in self.slm_models_loaded and self.slm_models_loaded[model_name]:
+                return True
+
+            logger.info(f"[AIAnalyzer] start loading SLM model: {model_name}")
+
+            if model_name == "qwen3":
+                if self.slm_qwen3 is None:
+                    model_path = r"models\Qwen3-1.7B"
+                    self.slm_qwen3 = Qwen3Summarizer(model_path)
+                success = self.slm_qwen3.load_model()
+                self.slm_models_loaded["qwen3"] = success
+
+            elif model_name == "midm":
+                if self.slm_midm is None:
+                    model_path = r"models\Midm-2.0-Mini"
+                    self.slm_midm = MidmSummarizer(model_path)
+                success = self.slm_midm.load_model()
+                self.slm_models_loaded["midm"] = success
+
+            else:
+                logger.error(f"[AIAnalyzer] unsupported SLM model: {model_name}")
+                return False
+
+            logger.info(f"[AIAnalyzer] finished loading SLM model: {model_name} - {success}")
+            return success
+
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] SLM load failure ({model_name}): {e}")
+            return False
+    
+    def analyze(self, conversation_text: str, analysis_options: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Simple analyze method for compatibility with ConsultationService"""
+        try:
+            logger.info(f"[AIAnalyzer] analyze method called with options: {analysis_options}")
+            # Default options for basic analysis
+            default_options = {
+                "model_tier": "llm",
+                "llm_model": "qwen3_4b",
+                "include_summary": True,
+                "include_category_recommendation": True,
+                "include_title_generation": True
+            }
+
+            # Merge with provided options
+            options = default_options.copy()
+            if analysis_options:
+                options.update(analysis_options)
+
+            # Call the full analysis method
+            result = self.analyze_consultation(
+                consultation_content=conversation_text,
+                stt_conversation=conversation_text,
+                options=options
+            )
+
+            # Return success format expected by ConsultationService
+            model_tier = options.get("model_tier", "llm")
+            if model_tier == "slm":
+                model_name = f"{result.get('slm_model', 'qwen3')}_slm"
+            else:
+                model_name = result.get('llm_model', 'qwen3_4b')
+
+            return {
+                "success": True,
+                "summary": result.get("summary", ""),
+                "recommended_categories": result.get("recommended_categories", []),
+                "generated_titles": result.get("generated_titles", []),
+                "processing_time": result.get("processing_time", 0),
+                "model_name": model_name,
+                "model_tier": model_tier
+            }
+
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] analyze method error: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def analyze_consultation(
+        self,
+        consultation_content: str,
+        stt_conversation: str,
+        options: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """????곗뼱 AI 遺꾩꽍 泥섎━"""
+
+        start_time = time.time()
+        results = {}
+
+        try:
+            logger.info(f"[AIAnalyzer] analyze_consultation method called with options: {options}")
+            # 紐⑤뜽 ?곗뼱 ?뺤씤
+            model_tier = options.get("model_tier", "llm")
+            slm_model = options.get("slm_model", "qwen3")
+            llm_model = options.get("llm_model", "qwen3_4b")
+
+            logger.info(f"[AIAnalyzer] DEBUG: model_tier={model_tier}, slm_model={slm_model}, llm_model={llm_model}")
+
+            if model_tier == "slm":
+                # SLM 紐⑤뱶: ?붿빟留?吏??
+                logger.info(f"[AIAnalyzer] SLM mode started - model: {slm_model}")
+
+                # SLM 紐⑤뜽 濡쒕뵫
+                if slm_model == "both":
+                    # ??紐⑤뜽 紐⑤몢 濡쒕뵫
+                    if not self._load_slm_model("qwen3") or not self._load_slm_model("midm"):
+                        raise RuntimeError("SLM ???紐⑤뜽 濡쒕뵫 ?ㅽ뙣")
+                else:
+                    if not self._load_slm_model(slm_model):
+                        raise RuntimeError(f"SLM 紐⑤뜽 濡쒕뵫 ?ㅽ뙣: {slm_model}")
+
+                # SLM ?붿빟 ?앹꽦
+                if options.get("include_summary", True):
+                    if slm_model == "both":
+                        # ??紐⑤뜽 紐⑤몢 ?뚯뒪??
+                        qwen3_result = self._generate_slm_summary(stt_conversation, "qwen3")
+                        midm_result = self._generate_slm_summary(stt_conversation, "midm")
+
+                        # ???紐⑤뜽 寃곌낵 援ъ꽦
+                        results.update({
+                            "summary": f"[Qwen3-1.7B] {qwen3_result.get('summary', '')}\n[Midm-2.0-Mini] {midm_result.get('summary', '')}",
+                            "qwen3_result": qwen3_result,
+                            "midm_result": midm_result,
+                            "dual_model": True,
+                            "processing_time": qwen3_result.get("processing_time", 0) + midm_result.get("processing_time", 0)
+                        })
+                    else:
+                        summary_result = self._generate_slm_summary(stt_conversation, slm_model)
+                        results.update(summary_result)
+
+                # SLM?먯꽌??移댄뀒怨좊━/?쒕ぉ ?앹꽦 鍮꾪솢?깊솕
+                logger.info("[AIAnalyzer] SLM mode summary finished")
+
+            else:
+                # LLM 紐⑤뱶: ?꾩쟾 湲곕뒫 吏??
+                logger.info(f"[AIAnalyzer] LLM mode started - {llm_model}")
+
+                # ?좏깮??LLM 紐⑤뜽 濡쒕뱶
+                if not self._load_llm_model(llm_model):
+                    raise RuntimeError(f"LLM 紐⑤뜽 濡쒕뵫 ?ㅽ뙣: {llm_model}")
+
+                # 1. ?붿빟 ?앹꽦
+                if options.get("include_summary", True):
+                    logger.info(f"[AIAnalyzer] generating summary with {llm_model}...")
+                    summary_result = self._generate_summary(stt_conversation)
+                    results.update(summary_result)
+
+                # 2. 移댄뀒怨좊━ 異붿쿇
+                if options.get("include_category_recommendation", True):
+                    logger.info("[AIAnalyzer] generating category recommendations...")
+                    categories = self.category_classifier.classify(consultation_content)
+                    results["recommended_categories"] = categories
+
+                # 3. ?쒕ぉ ?앹꽦
+                if options.get("include_title_generation", True):
+                    logger.info("[AIAnalyzer] generating titles...")
+                    titles = self.title_generator.generate(consultation_content)
+                    results["generated_titles"] = titles
+
+            # 泥섎━ ?쒓컙 湲곕줉
+            processing_time = time.time() - start_time
+            results["processing_time"] = processing_time
+            results["model_tier"] = model_tier
+
+            if model_tier == "slm":
+                results["slm_model"] = slm_model
+            else:
+                results["llm_model"] = llm_model
+
+            # ?곗냽 泥섎━瑜??꾪븳 硫붾え由??뺣━
+            self.reset_for_next_analysis()
+
+            logger.info(f"[AIAnalyzer] completed ({model_tier}) - {processing_time:.2f}s")
+            return results
+
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] processing failure: {e}")
+            # ?ㅽ뙣 ?쒖뿉??硫붾え由??뺣━ ?쒕룄
+            try:
+                self.reset_for_next_analysis()
+            except:
+                pass
+            raise
+    
+    def _generate_summary(self, conversation_text: str) -> Dict[str, Any]:
+        """LLM ?붿빟 ?앹꽦 (?좏깮??紐⑤뜽 ?ъ슜)"""
+        try:
+            # ?좏깮??LLM 紐⑤뜽濡??붿빟 ?앹꽦
+            summary_result = self.llm_summarizer.summarize_consultation(conversation_text)
+            
+            if not summary_result.get('success', False):
+                raise RuntimeError(f"?붿빟 ?앹꽦 ?ㅽ뙣: {summary_result.get('error', 'Unknown error')}")
+            
+            summary = summary_result['summary']
+            
+            # 湲곗〈 ?덉쭏 寃利??쒖뒪???쒖슜
+            quality_validation = quality_validator.validate_summary(summary, conversation_text)
+            
+            result = {
+                "summary": summary,
+                "quality_score": quality_validation.get('quality_score', 0.0),
+                "quality_warnings": quality_validation.get('warnings', []),
+                "ai_processing_time": summary_result.get('processing_time', 0.0)
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] summary validation error: {e}")
+            raise
+
+    def _generate_slm_summary(self, conversation_text: str, model_name: str) -> Dict[str, Any]:
+        """SLM 怨좎냽 ?붿빟 ?앹꽦"""
+        try:
+            if model_name == "qwen3":
+                if not self.slm_qwen3:
+                    raise RuntimeError("Qwen3-1.7B SLM model is not loaded")
+                result = self.slm_qwen3.summarize_consultation(conversation_text)
+            elif model_name == "midm":
+                if not self.slm_midm:
+                    raise RuntimeError("Midm-2.0-Mini SLM model is not loaded")
+                result = self.slm_midm.summarize_consultation(conversation_text)
+            else:
+                raise ValueError(f"Unsupported SLM model: {model_name}")
+
+            # 寃곌낵 ?뺤떇 ?듭씪
+            if result.get("success", False):
+                summary = result.get("summary", "")
+
+                # SLM 전용 품질 검증 (완화된 기준)
+                quality_validation = quality_validator.validate_summary_slm(summary, conversation_text)
+
+                return {
+                    "summary": summary,
+                    "processing_time": result.get("processing_time", 0),
+                    "model_name": result.get("model_name", model_name),
+                    "quality_score": quality_validation.get('quality_score', 0.0),
+                    "quality_warnings": quality_validation.get('warnings', []),
+                    "is_acceptable": quality_validation.get('is_acceptable', False),
+                    "slm_tier": True
+                }
+            else:
+                logger.warning(f"[AIAnalyzer] SLM summary failure - {model_name}: {result.get('error', 'Unknown error')}")
+                return {
+                    "summary": "",
+                    "error": result.get("error", "SLM ?붿빟 ?앹꽦 ?ㅽ뙣"),
+                    "slm_tier": True
+                }
+
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] SLM summary exception ({model_name}): {e}")
+            return {
+                "summary": "",
+                "error": str(e),
+                "slm_tier": True
+            }
+
+    def get_status(self) -> Dict[str, Any]:
+        """遺꾩꽍湲??곹깭 ?뺣낫"""
+        return {
+            "model_loaded": self.model_loaded,
+            "model_name": "Qwen3-4B-Instruct-2507",
+            "available_features": [
+                "summary_generation",
+                "category_recommendation", 
+                "title_generation"
+            ]
+        }
+    
+    def cleanup(self):
+        """紐⑤뱺 而댄룷?뚰듃??硫붾え由??뺣━"""
+        try:
+            logger.info("[AIAnalyzer] memory cleanup started")
+            
+            # 媛?而댄룷?뚰듃 ?뺣━
+            if hasattr(self, 'qwen_summarizer') and self.qwen_summarizer:
+                self.qwen_summarizer.cleanup()
+                
+            if hasattr(self, 'category_classifier') and self.category_classifier:
+                self.category_classifier.cleanup()
+                
+            if hasattr(self, 'title_generator') and self.title_generator:
+                self.title_generator.cleanup()
+            
+            # ?곹깭 珥덇린??
+            self.model_loaded = False
+            
+            logger.info("[AIAnalyzer] memory cleanup finished")
+            
+        except Exception as e:
+            logger.error(f"[AIAnalyzer] memory cleanup error: {e}")
+    
+    def reset_for_next_analysis(self):
+        """?곗냽 泥섎━???좏깮??硫붾え由??뺣━ (?깅뒫 理쒖쟻??"""
+        try:
+            # 硫붾え由??뺣━瑜?5?뚮쭏????踰덈쭔 ?섑뻾 (?깅뒫 ?μ긽)
+            if not hasattr(self, '_cleanup_counter'):
+                self._cleanup_counter = 0
+            
+            self._cleanup_counter += 1
+            
+            if self._cleanup_counter % 5 == 0:  # 5?뚮쭏???뺣━
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                # logger.debug(f"[AIAnalyzer] periodic cleanup ({self._cleanup_counter})")  # disabled in production
+            
+        except Exception as e:
+            logger.warning(f"[AIAnalyzer] cleanup warning: {e}")
+
