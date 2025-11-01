@@ -588,11 +588,39 @@ async def list_local_files():
 async def list_files_by_date(date: str):
     """특정 날짜 폴더의 파일 목록 반환"""
     import os
+    import re
     from pathlib import Path
 
     try:
-        # call_data/날짜 폴더 경로
-        date_path = Path("call_data") / date
+        # 날짜 형식 검증 (YYYY-MM-DD)
+        if not re.match(r'^\d{4}-\d{2}-\d{2}$', date):
+            return {
+                "success": False,
+                "error": "올바른 날짜 형식이 아닙니다 (YYYY-MM-DD 형식 필요)",
+                "files": []
+            }
+        
+        # 경로 순회 공격 방지
+        if '..' in date:
+            return {
+                "success": False,
+                "error": "경로 순회 공격 시도 감지됨",
+                "files": []
+            }
+        
+        # 절대 경로로 변환하여 상대 경로 공격 방지
+        base_path = Path("call_data").resolve()
+        date_path = (base_path / date).resolve()
+        
+        # base_path 내부인지 확인
+        try:
+            date_path.relative_to(base_path)
+        except ValueError:
+            return {
+                "success": False,
+                "error": "접근할 수 없는 경로입니다",
+                "files": []
+            }
 
         if not date_path.exists():
             return {
@@ -641,20 +669,65 @@ async def get_local_file(date: str, filename: str):
     """특정 로컬 파일 내용 반환"""
     import os
     import json
+    import re
     from pathlib import Path
     
     try:
-        # 안전한 경로 검증
-        if not date.startswith('202') or '..' in date or '..' in filename:
-            raise HTTPException(400, "잘못된 경로입니다")
+        # 엄격한 경로 검증 함수
+        def validate_file_path(date_str: str, filename_str: str) -> Path:
+            """안전한 파일 경로 검증 및 생성"""
+            # 날짜 형식 검증 (YYYY-MM-DD)
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="올바른 날짜 형식이 아닙니다 (YYYY-MM-DD 형식 필요)"
+                )
+            
+            # 파일명 검증 (알파벳, 숫자, 하이픈, 언더스코어, 점만 허용)
+            if not re.match(r'^[a-zA-Z0-9_\-\.]+\.json$', filename_str):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="올바른 파일명 형식이 아닙니다 (알파벳, 숫자, 하이픈, 언더스코어만 허용)"
+                )
+            
+            # 경로 순회 공격 방지 (.. 확인)
+            if '..' in date_str or '..' in filename_str:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="경로 순회 공격 시도 감지됨"
+                )
+            
+            # 절대 경로로 변환하여 상대 경로 공격 방지
+            base_path = Path("call_data").resolve()
+            file_path = (base_path / date_str / filename_str).resolve()
+            
+            # base_path 내부인지 확인 (경로 순회 공격 차단)
+            try:
+                file_path.relative_to(base_path)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="접근할 수 없는 경로입니다"
+                )
+            
+            return file_path
         
-        if not filename.endswith('.json'):
-            raise HTTPException(400, "JSON 파일만 접근 가능합니다")
+        # 경로 검증 및 파일 경로 생성
+        file_path = validate_file_path(date, filename)
         
-        file_path = Path("call_data") / date / filename
-        
+        # 파일 존재 확인
         if not file_path.exists():
-            raise HTTPException(404, "파일을 찾을 수 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="파일을 찾을 수 없습니다"
+            )
+        
+        # 파일이 아닌 경우 (디렉토리 등)
+        if not file_path.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="파일이 아닙니다"
+            )
         
         # 파일 읽기
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -676,11 +749,19 @@ async def get_local_file(date: str, filename: str):
             }
         }
         
+    except HTTPException:
+        raise
     except json.JSONDecodeError:
-        raise HTTPException(400, "JSON 파일 형식이 올바르지 않습니다")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="JSON 파일 형식이 올바르지 않습니다"
+        )
     except Exception as e:
         logger.error(f"[API] 로컬 파일 조회 실패: {e}")
-        raise HTTPException(500, f"파일 조회 중 오류 발생: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="파일 조회 중 오류가 발생했습니다"
+        )
 
 # ========================================
 # 테스트 데이터 제공 API 엔드포인트 

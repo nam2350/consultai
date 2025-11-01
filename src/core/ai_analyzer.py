@@ -1,9 +1,9 @@
 ﻿"""
-?듯빀 AI 遺꾩꽍湲??ㅼ??ㅽ듃?덉씠??(????곗뼱 吏??
+Unified AI Analyzer - Dual-Tier Architecture Orchestrator
 
-SLM/LLM ????곗뼱 ?꾪궎?띿쿂瑜?吏?먰븯???듯빀 AI 遺꾩꽍湲곗엯?덈떎.
-- SLM: ?ㅼ떆媛??곷떞??吏?먯슜 (?붿빟留? ~3珥?
-- LLM: 諛곗튂 遺꾩꽍??(?꾩쟾 湲곕뒫, ~20珥?
+Orchestrates AI analysis using SLM/LLM dual-tier architecture.
+- SLM: Real-time consultation support (fast summary ~3 seconds)
+- LLM: Batch analysis (full features, ~20 seconds)
 """
 import time
 import os
@@ -11,12 +11,12 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-# LLM 紐⑤뜽 而댄룷?뚰듃??- ?숈쟻 ?꾪룷?몃? ?꾪븳 湲곕낯媛?
+# LLM tier components - Shared summarizer instance for memory optimization
 from .models.qwen3_4b.summarizer import Qwen2507Summarizer
 from .models.qwen3_4b.classifier import CategoryClassifier
 from .models.qwen3_4b.title_generator import TitleGenerator
 
-# SLM 紐⑤뜽 而댄룷?뚰듃??
+# SLM tier components
 from .models.qwen3_1_7b.summarizer import Qwen3Summarizer
 from .models.midm_mini.summarizer import MidmSummarizer
 
@@ -26,42 +26,42 @@ import hashlib
 logger = logging.getLogger(__name__)
 
 class AIAnalyzer:
-    """?듯빀 AI 遺꾩꽍湲??ㅼ??ㅽ듃?덉씠??(????곗뼱 吏??"""
+    """Unified AI Analyzer Orchestrator (Dual-Tier Architecture)"""
 
     def __init__(self, model_path: str):
         """
         Args:
-            model_path: AI 紐⑤뜽 湲곕낯 寃쎈줈 (LLM??
+            model_path: AI model base path (LLM tier)
         """
         self.model_path = model_path
 
-        # LLM ?곗뼱 而댄룷?뚰듃??(吏??濡쒕뵫)
+        # LLM tier components (lazy loading)
         self.llm_summarizer = None
         self.category_classifier = None
         self.title_generator = None
         self.current_llm_model = None
 
-        # SLM ?곗뼱 而댄룷?뚰듃??(吏??濡쒕뵫)
+        # SLM tier components (lazy loading)
         self.slm_qwen3 = None  # Qwen3-1.7B
         self.slm_midm = None   # Midm-2.0-Mini
 
         self.model_loaded = False
-        self.slm_models_loaded = {}  # SLM 紐⑤뜽蹂?濡쒕뱶 ?곹깭
+        self.slm_models_loaded = {}  # SLM model loading status
 
-        # 罹먯떆 湲곕뒫 鍮꾪솢?깊솕 (?꾨줈?뺤뀡 ?덉젙???곗꽑)
+        # Real-time processing cache (future optimization)
         self.cache_enabled = False
     
     def _load_llm_model(self, model_name: str) -> bool:
-        """LLM 紐⑤뜽 ?숈쟻 濡쒕뵫"""
+        """Load LLM model (lazy loading)"""
         try:
-            # ?대? ?대떦 紐⑤뜽??濡쒕뱶?섏뼱 ?덈떎硫?嫄대꼫?곌린
+            # If the same model is already loaded, skip
             if self.current_llm_model == model_name and self.model_loaded:
                 logger.info(f"[AIAnalyzer] LLM model {model_name} already loaded")
                 return True
 
             logger.info(f"[AIAnalyzer] start loading LLM model: {model_name}")
 
-            # 湲곗〈 紐⑤뜽 ?뺣━
+            # Clean up existing model
             if self.llm_summarizer:
                 del self.llm_summarizer
                 del self.category_classifier
@@ -70,7 +70,7 @@ class AIAnalyzer:
                 self.category_classifier = None
                 self.title_generator = None
 
-            # 紐⑤뜽蹂?濡쒕뵫
+            # Load model
             if model_name == "qwen3_4b":
                 from .models.qwen3_4b.summarizer import Qwen2507Summarizer
                 from .models.qwen3_4b.classifier import CategoryClassifier
@@ -102,7 +102,7 @@ class AIAnalyzer:
             else:
                 logger.error(f"[AIAnalyzer] unsupported LLM model: {model_name}")
                 return False
-            # 紐⑤뜽 珥덇린??
+            # Initialize model
             success = self.llm_summarizer.load_model()
             if success:
                 self.current_llm_model = model_name
@@ -120,12 +120,12 @@ class AIAnalyzer:
             return False
 
     def initialize(self) -> bool:
-        """AI 遺꾩꽍湲?珥덇린??- 湲곕낯 LLM 紐⑤뜽 濡쒕뱶 (qwen3_4b)"""
+        """Initialize AI analyzer - Load default LLM model (qwen3_4b)"""
         try:
             logger.info("[AIAnalyzer] initialization sequence started")
             logger.info(f"[AIAnalyzer] current working directory: {os.getcwd()}")
 
-            # 湲곕낯 LLM 紐⑤뜽 濡쒕뱶 (qwen3_4b)
+            # Load default LLM model (qwen3_4b)
             success = self._load_llm_model("qwen3_4b")
             logger.info(f"[AIAnalyzer] default LLM load result: {success}")
 
@@ -148,7 +148,7 @@ class AIAnalyzer:
             return False
 
     def _load_slm_model(self, model_name: str) -> bool:
-        """SLM 紐⑤뜽 吏??濡쒕뵫"""
+        """Load SLM model (lazy loading)"""
         try:
             if model_name in self.slm_models_loaded and self.slm_models_loaded[model_name]:
                 return True
@@ -230,19 +230,19 @@ class AIAnalyzer:
             }
 
     def analyze_consultation(
-        self,
+        self, 
         consultation_content: str,
         stt_conversation: str,
         options: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """????곗뼱 AI 遺꾩꽍 泥섎━"""
+        """Dual-tier AI analysis processing"""
 
         start_time = time.time()
         results = {}
 
         try:
             logger.info(f"[AIAnalyzer] analyze_consultation method called with options: {options}")
-            # 紐⑤뜽 ?곗뼱 ?뺤씤
+            # Determine model tier
             model_tier = options.get("model_tier", "llm")
             slm_model = options.get("slm_model", "qwen3")
             llm_model = options.get("llm_model", "qwen3_4b")
@@ -250,26 +250,26 @@ class AIAnalyzer:
             logger.info(f"[AIAnalyzer] DEBUG: model_tier={model_tier}, slm_model={slm_model}, llm_model={llm_model}")
 
             if model_tier == "slm":
-                # SLM 紐⑤뱶: ?붿빟留?吏??
+                # SLM mode: Fast summary only
                 logger.info(f"[AIAnalyzer] SLM mode started - model: {slm_model}")
 
-                # SLM 紐⑤뜽 濡쒕뵫
+                # Load SLM model
                 if slm_model == "both":
-                    # ??紐⑤뜽 紐⑤몢 濡쒕뵫
+                    # Load both models
                     if not self._load_slm_model("qwen3") or not self._load_slm_model("midm"):
-                        raise RuntimeError("SLM ???紐⑤뜽 濡쒕뵫 ?ㅽ뙣")
+                        raise RuntimeError("SLM dual model loading failed")
                 else:
                     if not self._load_slm_model(slm_model):
-                        raise RuntimeError(f"SLM 紐⑤뜽 濡쒕뵫 ?ㅽ뙣: {slm_model}")
+                        raise RuntimeError(f"SLM model loading failed: {slm_model}")
 
-                # SLM ?붿빟 ?앹꽦
+                # Generate SLM summary
                 if options.get("include_summary", True):
                     if slm_model == "both":
-                        # ??紐⑤뜽 紐⑤몢 ?뚯뒪??
+                        # Generate with both models
                         qwen3_result = self._generate_slm_summary(stt_conversation, "qwen3")
                         midm_result = self._generate_slm_summary(stt_conversation, "midm")
 
-                        # ???紐⑤뜽 寃곌낵 援ъ꽦
+                        # Combine dual model results
                         results.update({
                             "summary": f"[Qwen3-1.7B] {qwen3_result.get('summary', '')}\n[Midm-2.0-Mini] {midm_result.get('summary', '')}",
                             "qwen3_result": qwen3_result,
@@ -281,36 +281,36 @@ class AIAnalyzer:
                         summary_result = self._generate_slm_summary(stt_conversation, slm_model)
                         results.update(summary_result)
 
-                # SLM?먯꽌??移댄뀒怨좊━/?쒕ぉ ?앹꽦 鍮꾪솢?깊솕
+                # Category/title generation disabled for SLM (cache optimization)
                 logger.info("[AIAnalyzer] SLM mode summary finished")
 
             else:
-                # LLM 紐⑤뱶: ?꾩쟾 湲곕뒫 吏??
+                # LLM mode: Full features processing
                 logger.info(f"[AIAnalyzer] LLM mode started - {llm_model}")
 
-                # ?좏깮??LLM 紐⑤뜽 濡쒕뱶
+                # Load selected LLM model
                 if not self._load_llm_model(llm_model):
-                    raise RuntimeError(f"LLM 紐⑤뜽 濡쒕뵫 ?ㅽ뙣: {llm_model}")
+                    raise RuntimeError(f"LLM model loading failed: {llm_model}")
 
-                # 1. ?붿빟 ?앹꽦
+                # 1. Generate summary
                 if options.get("include_summary", True):
                     logger.info(f"[AIAnalyzer] generating summary with {llm_model}...")
                     summary_result = self._generate_summary(stt_conversation)
                     results.update(summary_result)
 
-                # 2. 移댄뀒怨좊━ 異붿쿇
+                # 2. Category recommendation
                 if options.get("include_category_recommendation", True):
                     logger.info("[AIAnalyzer] generating category recommendations...")
                     categories = self.category_classifier.classify(consultation_content)
                     results["recommended_categories"] = categories
 
-                # 3. ?쒕ぉ ?앹꽦
+                # 3. Title generation
                 if options.get("include_title_generation", True):
                     logger.info("[AIAnalyzer] generating titles...")
                     titles = self.title_generator.generate(consultation_content)
                     results["generated_titles"] = titles
 
-            # 泥섎━ ?쒓컙 湲곕줉
+            # Record processing time
             processing_time = time.time() - start_time
             results["processing_time"] = processing_time
             results["model_tier"] = model_tier
@@ -320,7 +320,7 @@ class AIAnalyzer:
             else:
                 results["llm_model"] = llm_model
 
-            # ?곗냽 泥섎━瑜??꾪븳 硫붾え由??뺣━
+            # Memory cleanup for next processing
             self.reset_for_next_analysis()
 
             logger.info(f"[AIAnalyzer] completed ({model_tier}) - {processing_time:.2f}s")
@@ -328,7 +328,7 @@ class AIAnalyzer:
 
         except Exception as e:
             logger.error(f"[AIAnalyzer] processing failure: {e}")
-            # ?ㅽ뙣 ?쒖뿉??硫붾え由??뺣━ ?쒕룄
+            # Memory cleanup on failure
             try:
                 self.reset_for_next_analysis()
             except:
@@ -336,17 +336,17 @@ class AIAnalyzer:
             raise
     
     def _generate_summary(self, conversation_text: str) -> Dict[str, Any]:
-        """LLM ?붿빟 ?앹꽦 (?좏깮??紐⑤뜽 ?ъ슜)"""
+        """Generate LLM summary (using selected model)"""
         try:
-            # ?좏깮??LLM 紐⑤뜽濡??붿빟 ?앹꽦
+            # Generate summary with selected LLM model
             summary_result = self.llm_summarizer.summarize_consultation(conversation_text)
             
             if not summary_result.get('success', False):
-                raise RuntimeError(f"?붿빟 ?앹꽦 ?ㅽ뙣: {summary_result.get('error', 'Unknown error')}")
+                raise RuntimeError(f"Summary generation failed: {summary_result.get('error', 'Unknown error')}")
             
             summary = summary_result['summary']
             
-            # 湲곗〈 ?덉쭏 寃利??쒖뒪???쒖슜
+            # Apply existing quality validation system
             quality_validation = quality_validator.validate_summary(summary, conversation_text)
             
             result = {
@@ -363,7 +363,7 @@ class AIAnalyzer:
             raise
 
     def _generate_slm_summary(self, conversation_text: str, model_name: str) -> Dict[str, Any]:
-        """SLM 怨좎냽 ?붿빟 ?앹꽦"""
+        """Generate SLM fast summary"""
         try:
             if model_name == "qwen3":
                 if not self.slm_qwen3:
@@ -376,7 +376,7 @@ class AIAnalyzer:
             else:
                 raise ValueError(f"Unsupported SLM model: {model_name}")
 
-            # 寃곌낵 ?뺤떇 ?듭씪
+            # Format result
             if result.get("success", False):
                 summary = result.get("summary", "")
 
@@ -396,7 +396,7 @@ class AIAnalyzer:
                 logger.warning(f"[AIAnalyzer] SLM summary failure - {model_name}: {result.get('error', 'Unknown error')}")
                 return {
                     "summary": "",
-                    "error": result.get("error", "SLM ?붿빟 ?앹꽦 ?ㅽ뙣"),
+                    "error": result.get("error", "SLM summary generation failed"),
                     "slm_tier": True
                 }
 
@@ -409,7 +409,7 @@ class AIAnalyzer:
             }
 
     def get_status(self) -> Dict[str, Any]:
-        """遺꾩꽍湲??곹깭 ?뺣낫"""
+        """Get analyzer status"""
         return {
             "model_loaded": self.model_loaded,
             "model_name": "Qwen3-4B-Instruct-2507",
@@ -421,11 +421,11 @@ class AIAnalyzer:
         }
     
     def cleanup(self):
-        """紐⑤뱺 而댄룷?뚰듃??硫붾え由??뺣━"""
+        """Cleanup all component resources"""
         try:
             logger.info("[AIAnalyzer] memory cleanup started")
             
-            # 媛?而댄룷?뚰듃 ?뺣━
+            # Component cleanup
             if hasattr(self, 'qwen_summarizer') and self.qwen_summarizer:
                 self.qwen_summarizer.cleanup()
                 
@@ -435,7 +435,7 @@ class AIAnalyzer:
             if hasattr(self, 'title_generator') and self.title_generator:
                 self.title_generator.cleanup()
             
-            # ?곹깭 珥덇린??
+            # Reset status
             self.model_loaded = False
             
             logger.info("[AIAnalyzer] memory cleanup finished")
@@ -444,15 +444,15 @@ class AIAnalyzer:
             logger.error(f"[AIAnalyzer] memory cleanup error: {e}")
     
     def reset_for_next_analysis(self):
-        """?곗냽 泥섎━???좏깮??硫붾え由??뺣━ (?깅뒫 理쒖쟻??"""
+        """Memory cleanup for next processing (optimized periodic)"""
         try:
-            # 硫붾え由??뺣━瑜?5?뚮쭏????踰덈쭔 ?섑뻾 (?깅뒫 ?μ긽)
+            # Perform cleanup every 5 times (optimized frequency)
             if not hasattr(self, '_cleanup_counter'):
                 self._cleanup_counter = 0
             
             self._cleanup_counter += 1
             
-            if self._cleanup_counter % 5 == 0:  # 5?뚮쭏???뺣━
+            if self._cleanup_counter % 5 == 0:  # Cleanup every 5 times
                 import torch
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
