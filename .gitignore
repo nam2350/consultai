@@ -133,7 +133,7 @@ ipython_config.py
 # Custom ignores
 .claude/
 docs/
-test_data/
 .env.example
 AGENTS.md
 CLAUDE.md
+test_data/
