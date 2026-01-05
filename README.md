@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석하는 차세대 플랫폼입니다. STT 변환된 음성 데이터를 처리하여 상담사와 관리자가 즉시 활용할 수 있는 구조화된 정보를 자동 생성합니다.
+ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석하는 플랫폼입니다. STT 변환된 음성 데이터를 처리하여 상담사와 관리자가 즉시 활용할 수 있는 구조화된 정보를 자동 생성합니다.
 
 ---
 
@@ -151,7 +151,6 @@ curl -X POST http://localhost:8000/api/v1/consultation/realtime-analyze \
 - [개발 전용 API](docs/DEV_API_GUIDE.md) - 인증 없는 빠른 테스트
 
 ### 상세 문서
-- [통합 가이드](docs/CENTERLINK_INTEGRATION_GUIDE.md) - 센터링크 연동 가이드
 - [API 명세서](docs/API_SPECIFICATION_CENTERLINK.md) - 완전한 API 스펙
 - [테스트 매뉴얼](docs/CENTERLINK_API_TEST_MANUAL.md) - 단계별 테스트 절차
 - [시스템 아키텍처](docs/dual_model_architecture.md) - 듀얼-티어 AI 구조
@@ -272,92 +271,7 @@ flake8 src/ scripts/
 - **권한 관리**: realtime, batch 권한 분리
 - **개발 모드**: DEBUG=true일 때만 인증 없는 API 활성화
 
-### 환경 변수 관리
-
-민감한 정보는 `.env` 파일에 저장:
-```bash
-BOUND_KEYS=your_secure_key_min_20_chars
-CENTERLINK_JWT=your_jwt_token
-```
-
-⚠️ **중요**: `.env` 파일은 `.gitignore`에 포함되어 GitHub에 업로드되지 않습니다.
-
 ---
-
-## 🤝 기여
-
-기여는 언제나 환영합니다!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📝 라이선스
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 📞 지원
-
-- **이슈 트래커**: [GitHub Issues](https://github.com/YOUR_USERNAME/consultai/issues)
-- **문서**: [Documentation](docs/)
-- **이메일**: support@consultai.com
-
----
-
-## 🙏 감사의 말
-
-- [HuggingFace](https://huggingface.co/) - 모델 호스팅
-- [FastAPI](https://fastapi.tiangolo.com/) - 웹 프레임워크
-- [Qwen Team](https://github.com/QwenLM) - Qwen 언어 모델
-
----
-
-## 📈 업데이트 히스토리
-
-### v1.0.0 (2025-10-16)
-- ✅ 듀얼-티어 AI 아키텍처 완성 (SLM/LLM)
-- ✅ 센터링크 연동 API 구현
-- ✅ 999개 실제 통화 데이터 검증 완료
-- ✅ 개발 전용 API 추가 (인증 없음)
-- ✅ 완전한 문서화
-
----
-
-**Made with ❤️ by AI Analysis Team**
-
----
-
-## 💡 추가 정보
-
-### 시스템 요구사항
-
-**최소 사양**:
-- CPU: 4코어 이상
-- RAM: 16GB
-- GPU: NVIDIA GPU 8GB+ (선택)
-- 디스크: 20GB
-
-**권장 사양**:
-- CPU: 8코어 이상 (AMD Ryzen 9 9900X 또는 Intel i9)
-- RAM: 32GB+
-- GPU: NVIDIA RTX 4080+ 16GB
-- 디스크: 50GB SSD
-
-### 성능 최적화
-
-GPU 사용 시 성능 향상:
-```python
-# RTX 5080 최적화 예시
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-max_memory = {"0": "14GB"}
-```
 
 ### 지원되는 STT 형식
 

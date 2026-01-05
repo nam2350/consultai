@@ -33,7 +33,14 @@
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git reset:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(git fetch:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)",
+      "Bash(chmod +x \"C:/Workspace/llm-benchmark-suite/scripts\"/*.py)",
+      "Bash(sort:*)"
     ],
     "deny": [],
     "ask": []
