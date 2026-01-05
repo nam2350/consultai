@@ -1,7 +1,7 @@
 """
 바운드 키 인증 시스템
 
-센터링크 연동을 위한 바운드 키 기반 인증 시스템
+외부 시스템 연동을 위한 바운드 키 기반 인증 시스템
 """
 
 import os
@@ -29,8 +29,8 @@ class BoundKeyValidator:
             # 기본 테스트 키 (개발 환경용)
             logger.warning("[인증] BOUND_KEYS 환경변수가 설정되지 않았습니다. 기본 테스트 키를 사용합니다.")
             self.valid_keys = {
-                "test_key_centerlink_2025": {
-                    "name": "센터링크 테스트 키",
+                "test_key_external_2025": {
+                    "name": "외부 시스템 테스트 키",
                     "created_at": "2025-01-01",
                     "expires_at": None,
                     "permissions": ["realtime", "batch"]

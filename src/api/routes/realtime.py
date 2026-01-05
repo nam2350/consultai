@@ -1,5 +1,5 @@
 """
-실시간 상담 분석 API (센터링크 연동용)
+실시간 상담 분석 API (외부 시스템 연동용)
 
 SLM 모델을 사용한 빠른 상담 요약 제공 (1-3초 목표)
 상담사 실시간 지원을 위한 경량 분석 API
@@ -91,7 +91,7 @@ async def realtime_analyze(
 
     Args:
         request: 실시간 분석 요청
-            - bound_key: 센터링크 바운드 키
+            - bound_key: 외부 시스템 바운드 키
             - consultation_id: 상담 ID
             - stt_data: STT 변환 데이터
 

@@ -415,39 +415,39 @@ async def force_reset_service():
         )
 
 # ========================================
-# 센터링크 호환 API 엔드포인트
+# 외부 시스템 호환 API 엔드포인트
 # ========================================
 
 @router.post(
-    "/centerlink/analyze",
+    "/external/analyze",
     response_model=Dict[str, Any],
-    summary="센터링크 호환 상담 분석",
-    description="센터링크 시스템과 호환되는 상담 분석 API"
+    summary="외부 시스템 호환 상담 분석",
+    description="외부 시스템과 호환되는 상담 분석 API"
 )
-async def centerlink_analyze(
+async def external_analyze(
     request: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    센터링크 호환 상담 분석 API
+    외부 시스템 호환 상담 분석 API
     
-    센터링크에서 전송하는 형식에 맞춰 데이터를 처리하고
-    결과를 센터링크가 기대하는 형식으로 반환합니다.
+    외부 시스템에서 전송하는 형식에 맞춰 데이터를 처리하고
+    결과를 외부 시스템이 기대하는 형식으로 반환합니다.
     """
     try:
-        # 1. 센터링크 요청을 내부 스키마로 변환
-        consultation_request = _convert_centerlink_request(request)
+        # 1. 외부 시스템 요청을 내부 스키마로 변환
+        consultation_request = _convert_external_request(request)
         
         # 2. 내부 분석 서비스 호출 (동기 호출)
         service = await get_consultation_service()
         result = service.analyze_consultation(consultation_request)
         
-        # 3. 결과를 센터링크 형식으로 변환
-        centerlink_response = _convert_to_centerlink_response(result, request)
+        # 3. 결과를 외부 시스템 형식으로 변환
+        external_response = _convert_to_external_response(result, request)
         
-        return centerlink_response
+        return external_response
         
     except Exception as e:
-        logger.error(f"[API] 센터링크 분석 오류: {e}")
+        logger.error(f"[API] 외부 시스템 분석 오류: {e}")
         return {
             "consultation_id": request.get("consultation_id", "unknown"),
             "success": False,
@@ -455,12 +455,12 @@ async def centerlink_analyze(
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
-def _convert_centerlink_request(centerlink_data: Dict[str, Any]) -> ConsultationAnalysisRequest:
-    """센터링크 요청을 내부 스키마로 변환"""
+def _convert_external_request(external_data: Dict[str, Any]) -> ConsultationAnalysisRequest:
+    """외부 시스템 요청을 내부 스키마로 변환"""
     from ...schemas.consultation import STTData, AnalysisOptions
     
     # STT 데이터 변환
-    conversation_data = centerlink_data.get("conversation_data", {})
+    conversation_data = external_data.get("conversation_data", {})
     stt_data = STTData(
         conversation_text=conversation_data.get("conversation_text"),
         segments=conversation_data.get("segments"),
@@ -471,23 +471,23 @@ def _convert_centerlink_request(centerlink_data: Dict[str, Any]) -> Consultation
     # 분석 옵션 설정
     options = AnalysisOptions(
         include_summary=True,
-        include_category_recommendation=centerlink_data.get("include_categories", True),
-        include_title_generation=centerlink_data.get("include_titles", True),
-        max_summary_length=centerlink_data.get("max_summary_length", 300)
+        include_category_recommendation=external_data.get("include_categories", True),
+        include_title_generation=external_data.get("include_titles", True),
+        max_summary_length=external_data.get("max_summary_length", 300)
     )
     
     return ConsultationAnalysisRequest(
-        consultation_id=centerlink_data.get("consultation_id", f"CL_{int(time.time())}"),
-        consultation_content=centerlink_data.get("consultation_content", ""),
+        consultation_id=external_data.get("consultation_id", f"EXT_{int(time.time())}"),
+        consultation_content=external_data.get("consultation_content", ""),
         stt_data=stt_data,
         options=options
     )
 
-def _convert_to_centerlink_response(
+def _convert_to_external_response(
     result: ConsultationAnalysisResponse, 
     original_request: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """내부 결과를 센터링크 형식으로 변환"""
+    """내부 결과를 외부 시스템 형식으로 변환"""
     
     if result.success:
         response = {

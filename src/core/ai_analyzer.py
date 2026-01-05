@@ -18,7 +18,7 @@ from .models.qwen3_4b.title_generator import TitleGenerator
 
 # SLM tier components
 from .models.qwen3_1_7b.summarizer import Qwen3Summarizer
-from .models.midm_mini.summarizer import MidmSummarizer
+
 
 from .quality_validator import quality_validator
 import hashlib
@@ -43,7 +43,7 @@ class AIAnalyzer:
 
         # SLM tier components (lazy loading)
         self.slm_qwen3 = None  # Qwen3-1.7B
-        self.slm_midm = None   # Midm-2.0-Mini
+
 
         self.model_loaded = False
         self.slm_models_loaded = {}  # SLM model loading status
@@ -81,23 +81,7 @@ class AIAnalyzer:
                 self.title_generator = TitleGenerator(shared_summarizer=self.llm_summarizer)
 
 
-            elif model_name == "midm_base":
-                from .models.midm_base.summarizer import MidmBaseSummarizer
-                from .models.midm_base.classifier import CategoryClassifier
-                from .models.midm_base.title_generator import TitleGenerator
 
-                self.llm_summarizer = MidmBaseSummarizer(self.model_path)
-                self.category_classifier = CategoryClassifier(shared_summarizer=self.llm_summarizer)
-                self.title_generator = TitleGenerator(shared_summarizer=self.llm_summarizer)
-
-            elif model_name == "ax_light":
-                from .models.ax_light.summarizer import AXLightSummarizer
-                from .models.ax_light.classifier import CategoryClassifier
-                from .models.ax_light.title_generator import TitleGenerator
-
-                self.llm_summarizer = AXLightSummarizer(self.model_path)
-                self.category_classifier = CategoryClassifier(shared_summarizer=self.llm_summarizer)
-                self.title_generator = TitleGenerator(shared_summarizer=self.llm_summarizer)
 
             else:
                 logger.error(f"[AIAnalyzer] unsupported LLM model: {model_name}")
@@ -162,12 +146,7 @@ class AIAnalyzer:
                 success = self.slm_qwen3.load_model()
                 self.slm_models_loaded["qwen3"] = success
 
-            elif model_name == "midm":
-                if self.slm_midm is None:
-                    model_path = r"models\Midm-2.0-Mini"
-                    self.slm_midm = MidmSummarizer(model_path)
-                success = self.slm_midm.load_model()
-                self.slm_models_loaded["midm"] = success
+
 
             else:
                 logger.error(f"[AIAnalyzer] unsupported SLM model: {model_name}")
@@ -254,32 +233,13 @@ class AIAnalyzer:
                 logger.info(f"[AIAnalyzer] SLM mode started - model: {slm_model}")
 
                 # Load SLM model
-                if slm_model == "both":
-                    # Load both models
-                    if not self._load_slm_model("qwen3") or not self._load_slm_model("midm"):
-                        raise RuntimeError("SLM dual model loading failed")
-                else:
-                    if not self._load_slm_model(slm_model):
-                        raise RuntimeError(f"SLM model loading failed: {slm_model}")
+                if not self._load_slm_model(slm_model):
+                    raise RuntimeError(f"SLM model loading failed: {slm_model}")
 
                 # Generate SLM summary
                 if options.get("include_summary", True):
-                    if slm_model == "both":
-                        # Generate with both models
-                        qwen3_result = self._generate_slm_summary(stt_conversation, "qwen3")
-                        midm_result = self._generate_slm_summary(stt_conversation, "midm")
-
-                        # Combine dual model results
-                        results.update({
-                            "summary": f"[Qwen3-1.7B] {qwen3_result.get('summary', '')}\n[Midm-2.0-Mini] {midm_result.get('summary', '')}",
-                            "qwen3_result": qwen3_result,
-                            "midm_result": midm_result,
-                            "dual_model": True,
-                            "processing_time": qwen3_result.get("processing_time", 0) + midm_result.get("processing_time", 0)
-                        })
-                    else:
-                        summary_result = self._generate_slm_summary(stt_conversation, slm_model)
-                        results.update(summary_result)
+                    summary_result = self._generate_slm_summary(stt_conversation, slm_model)
+                    results.update(summary_result)
 
                 # Category/title generation disabled for SLM (cache optimization)
                 logger.info("[AIAnalyzer] SLM mode summary finished")
@@ -369,10 +329,7 @@ class AIAnalyzer:
                 if not self.slm_qwen3:
                     raise RuntimeError("Qwen3-1.7B SLM model is not loaded")
                 result = self.slm_qwen3.summarize_consultation(conversation_text)
-            elif model_name == "midm":
-                if not self.slm_midm:
-                    raise RuntimeError("Midm-2.0-Mini SLM model is not loaded")
-                result = self.slm_midm.summarize_consultation(conversation_text)
+
             else:
                 raise ValueError(f"Unsupported SLM model: {model_name}")
 

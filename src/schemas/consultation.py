@@ -159,12 +159,12 @@ class SystemStatus(BaseModel):
     model_config = {"protected_namespaces": ()}
 
 # ========================
-# 실시간 처리 스키마 (센터링크 연동용)
+# 실시간 처리 스키마 (외부 시스템 연동용)
 # ========================
 
 class RealtimeAnalysisRequest(BaseModel):
     """실시간 상담 분석 요청 (SLM 전용)"""
-    bound_key: str = Field(..., description="센터링크 바운드 키")
+    bound_key: str = Field(..., description="외부 시스템 바운드 키")
     consultation_id: str = Field(..., description="상담 고유 ID")
     stt_data: STTData = Field(..., description="STT 변환 데이터")
 
@@ -189,12 +189,12 @@ class RealtimeAnalysisResponse(BaseModel):
     error_code: Optional[str] = Field(None, description="에러 코드")
 
 # ========================
-# 비동기 배치 처리 스키마 (센터링크 연동용)
+# 비동기 배치 처리 스키마 (외부 시스템 연동용)
 # ========================
 
 class AsyncBatchAnalysisRequest(BaseModel):
     """비동기 배치 분석 요청 (LLM 전용)"""
-    bound_key: str = Field(..., description="센터링크 바운드 키")
+    bound_key: str = Field(..., description="외부 시스템 바운드 키")
     batch_id: str = Field(..., description="배치 고유 ID")
     consultations: List[Dict[str, Any]] = Field(..., description="상담 데이터 목록 (최대 20개)")
     callback_url: str = Field(..., description="결과 전송할 콜백 URL")
@@ -217,7 +217,7 @@ class AsyncBatchAnalysisResponse(BaseModel):
     error_code: Optional[str] = Field(None, description="에러 코드")
 
 class BatchCallbackResult(BaseModel):
-    """배치 처리 완료 후 센터링크로 전송할 결과"""
+    """배치 처리 완료 후 외부 시스템으로 전송할 결과"""
     batch_id: str = Field(..., description="배치 고유 ID")
     status: str = Field(..., description="배치 상태 (completed/failed)")
     total_count: int = Field(..., description="총 상담 수")

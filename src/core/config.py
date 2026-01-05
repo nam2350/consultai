@@ -40,22 +40,18 @@ class ApplicationSettings(BaseSettings):
     MAX_SUMMARY_LENGTH: int = Field(default=600, ge=1, description="최대 요약 길이 (상세 분석을 위해 확장: 256->600)")
     
     # SLM 실시간 처리 설정
-    SLM_MODEL_TYPE: str = Field(default="qwen3", description="실시간 SLM 모델 타입 (qwen3/midm)")
-    SLM_FALLBACK_MODEL: str = Field(default="midm", description="SLM 폴백 모델")
+    SLM_MODEL_TYPE: str = Field(default="qwen3", description="실시간 SLM 모델 타입 (qwen3)")
     SLM_MODEL_PATH_QWEN3: str = Field(default=r"models\Qwen3-1.7B", description="Qwen3-1.7B 모델 경로")
-    SLM_MODEL_PATH_MIDM: str = Field(default=r"models\Midm-2.0-Mini", description="Midm-2.0-Mini 모델 경로")
+
     SLM_TARGET_RESPONSE_TIME: float = Field(default=3.0, description="SLM 목표 응답시간(초)")
     SLM_MAX_INPUT_LENGTH: int = Field(default=12000, description="SLM 최대 입력 길이")
     
     # MLM 배치 처리 설정 (멀티 모델)
     BATCH_INTERVAL_MINUTES: int = Field(default=15, description="배치 처리 간격(분)")
     BATCH_PRIMARY_MODEL: str = Field(default="qwen3_4b", description="우선 배치 모델")
-    BATCH_FALLBACK_MODEL: str = Field(default="midm_base", description="폴백 배치 모델")
     
     # 배치 모델 경로들
     MLM_MODEL_PATH_QWEN3_4B: str = Field(default=r"models\Qwen3-4B", description="Qwen3-4B 모델 경로 (기존)")
-    MLM_MODEL_PATH_AX_4B: str = Field(default=r"models\A.X-4.0-Light", description="A.X-4.0-Light 모델 경로")
-    MLM_MODEL_PATH_MIDM_BASE: str = Field(default=r"models\Midm-2.0-Base", description="Midm-2.0-Base 모델 경로")
     
     # 모델 선택 전략
     ENABLE_DYNAMIC_MODEL_SELECTION: bool = Field(default=True, description="동적 모델 선택 활성화")

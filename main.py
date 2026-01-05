@@ -106,10 +106,10 @@ app.include_router(health.router, prefix="/api/v1")
 # 상담 분석 라우터 등록 (LLM 배치 처리)
 app.include_router(consultation_router, prefix="/api/v1")
 
-# 실시간 상담 분석 라우터 등록 (SLM 실시간 처리 - 센터링크 연동용)
+# 실시간 상담 분석 라우터 등록 (SLM 실시간 처리 - 외부 시스템 연동용)
 app.include_router(realtime_router, prefix="/api/v1")
 
-# 비동기 배치 처리 라우터 등록 (LLM 배치 처리 - 센터링크 연동용)
+# 비동기 배치 처리 라우터 등록 (LLM 배치 처리 - 외부 시스템 연동용)
 app.include_router(batch_router, prefix="/api/v1")
 
 # 개발 전용 라우터 등록 (인증 없음 - DEBUG 모드에서만)
@@ -125,11 +125,11 @@ async def root():
         # 시스템 상태
         "health": "/api/v1/health",
 
-        # 실시간 처리 (SLM - 센터링크 연동용)
+        # 실시간 처리 (SLM - 외부 시스템 연동용)
         "realtime_analyze": "/api/v1/consultation/realtime-analyze",
         "realtime_status": "/api/v1/consultation/realtime-status",
 
-        # 비동기 배치 처리 (LLM - 센터링크 연동용)
+        # 비동기 배치 처리 (LLM - 외부 시스템 연동용)
         "batch_analyze_async": "/api/v1/consultation/batch-analyze-async",
         "batch_status": "/api/v1/consultation/batch-status/{batch_id}",
         "batch_cancel": "/api/v1/consultation/batch-cancel/{batch_id}",
@@ -140,8 +140,8 @@ async def root():
         "consultation_batch": "/api/v1/consultation/batch-analyze",
         "consultation_status": "/api/v1/consultation/status",
 
-        # 센터링크 기존 연동
-        "centerlink_analyze": "/api/v1/consultation/centerlink/analyze"
+        # 외부 시스템 호환 연동
+        "external_analyze": "/api/v1/consultation/external/analyze"
     }
 
     # DEBUG 모드일 때만 개발 전용 엔드포인트 추가
@@ -151,7 +151,7 @@ async def root():
         endpoints["dev_test"] = "/api/v1/dev/test (개발 전용)"
 
     return {
-        "message": "AI 상담 분석 시스템 (센터링크 연동)",
+        "message": "AI 상담 분석 시스템 (외부 시스템 연동)",
         "version": "1.0.0",
         "status": "running",
         "debug_mode": settings.DEBUG,

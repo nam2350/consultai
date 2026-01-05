@@ -5,7 +5,6 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석하는 플랫폼입니다. STT 변환된 음성 데이터를 처리하여 상담사와 관리자가 즉시 활용할 수 있는 구조화된 정보를 자동 생성합니다.
 
@@ -31,7 +30,7 @@ ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석하는 플랫�
 - ✅ **제목 생성**: 키워드형/서술형 타이틀
 - ✅ **품질 검증**: 환각 차단 및 자동 품질 점수
 
-### 🔌 센터링크 연동 API
+### 🔌 연동 API
 - **실시간 API**: 바운드 키 인증, 1-3초 응답
 - **배치 API**: 비동기 처리, 콜백 시스템
 - **개발 전용 API**: 인증 없는 빠른 테스트 (DEBUG 모드)
@@ -39,7 +38,7 @@ ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석하는 플랫�
 ### ✅ 검증된 성능
 - **999개** 실제 통화 데이터 테스트 완료
 - **100%** 성공률, 평균 품질 **0.990/1.00**
-- **6가지** STT JSON 형식 완벽 지원
+- **6가지** STT JSON 형식 지원
 
 ---
 
@@ -87,28 +86,15 @@ models/
 
 ### 환경 설정
 
-```bash
-# .env 파일 생성
-cp .env.example .env
-```
-
 `.env` 파일 수정:
 ```bash
 DEBUG=true
 HOST=0.0.0.0
 PORT=8000
-BOUND_KEYS=your_secure_key_min_20_characters
+BOUND_KEYS=your_secure_key_min_20_chars
+EXTERNAL_SYSTEM_KEY=your_key
 ```
-
-### 서버 실행
-
-```bash
-# 개발 서버
-python main.py
-
-# 프로덕션 서버
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
-```
+---
 
 ### API 테스트
 
@@ -116,46 +102,11 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 - API 문서: http://localhost:8000/docs
 - 대시보드: http://localhost:8000/static/consultation_dashboard.html
 
-**cURL (개발 전용 API - 인증 없음)**:
-```bash
-curl -X POST http://localhost:8000/api/v1/dev/realtime-analyze-no-auth \
-  -H "Content-Type: application/json" \
-  -d '{
-    "consultation_id": "TEST_001",
-    "stt_data": {
-      "conversation_text": "상담사: 안녕하세요.\n고객: 보험 문의합니다."
-    }
-  }'
-```
-
-**cURL (운영 API - 바운드 키 인증)**:
-```bash
-curl -X POST http://localhost:8000/api/v1/consultation/realtime-analyze \
-  -H "X-Bound-Key: test_key_centerlink_2025" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "bound_key": "test_key_centerlink_2025",
-    "consultation_id": "TEST_001",
-    "stt_data": {
-      "conversation_text": "상담사: 안녕하세요.\n고객: 보험 문의합니다."
-    }
-  }'
-```
-
 ---
 
-## 📖 문서
-
-### 빠른 시작
-- [빠른 테스트 가이드](docs/QUICK_TEST_START.md) - 2-5분 안에 시작하기
-- [개발 전용 API](docs/DEV_API_GUIDE.md) - 인증 없는 빠른 테스트
-
-### 상세 문서
-- [API 명세서](docs/API_SPECIFICATION_CENTERLINK.md) - 완전한 API 스펙
-- [테스트 매뉴얼](docs/CENTERLINK_API_TEST_MANUAL.md) - 단계별 테스트 절차
-- [시스템 아키텍처](docs/dual_model_architecture.md) - 듀얼-티어 AI 구조
-
----
+기본적으로 Qwen3 계열의 모델을 사용 **더 성능이 우수한 AI 모델이 출시될 경우 손쉽게 교체할 수 있는 유연한 아키텍처**로 설계.
+- `src/core/models/` 디렉토리에 새 모델 어댑터를 추가하여 적용 가능
+- 설정 파일(`config.py`) 변경으로 모델 교체 가능
 
 ## 🏗️ 시스템 아키텍처
 
@@ -170,28 +121,12 @@ curl -X POST http://localhost:8000/api/v1/consultation/realtime-analyze \
 │  ┌──────────┐        ┌──────────┐      │
 │  │   SLM    │        │   LLM    │      │
 │  │ Qwen3    │        │ Qwen3    │      │
-│  │  1.7B    │        │   4B     │      │
 │  └──────────┘        └──────────┘      │
 ├─────────────────────────────────────────┤
 │      STT Data Processor (6 formats)    │
 └─────────────────────────────────────────┘
 ```
 
----
-
-## 🔧 기술 스택
-
-**Backend**
-- FastAPI, Uvicorn, Pydantic
-
-**AI/ML**
-- PyTorch, Transformers (HuggingFace)
-- Qwen3-1.7B (SLM), Qwen3-4B (LLM)
-
-**Infrastructure**
-- CUDA 12.x, ngrok (외부 노출)
-
----
 
 ## 📊 성능 지표
 
@@ -208,32 +143,6 @@ curl -X POST http://localhost:8000/api/v1/consultation/realtime-analyze \
 
 ---
 
-## 🛠️ 개발
-
-### 프로젝트 구조
-
-```
-consultai/
-├── main.py                     # FastAPI 엔트리포인트
-├── src/
-│   ├── core/                   # 핵심 비즈니스 로직
-│   │   ├── ai_analyzer.py     # AI 분석 오케스트레이터
-│   │   ├── models/            # 듀얼-티어 모델
-│   │   │   ├── qwen3_1_7b/   # SLM (실시간)
-│   │   │   └── qwen3_4b/     # LLM (배치)
-│   │   └── file_processor.py  # STT 데이터 처리
-│   ├── api/                   # API 라우트
-│   │   └── routes/
-│   │       ├── realtime.py   # 실시간 API
-│   │       ├── batch.py      # 배치 API
-│   │       └── dev.py        # 개발 전용
-│   └── schemas/               # 데이터 스키마
-├── scripts/                   # 유틸리티 스크립트
-├── docs/                      # 문서
-├── models/                    # AI 모델 (Git LFS 또는 제외)
-└── tests/                     # 테스트
-```
-
 ### 테스트 실행
 
 ```bash
@@ -248,28 +157,6 @@ python local_test_selective_ai.py --model-tier llm -c 10
 cd ..
 python test_external_api.py
 ```
-
-### 코드 품질
-
-```bash
-# 포맷팅
-black src/ scripts/
-
-# Import 정리
-isort src/ scripts/
-
-# 린팅
-flake8 src/ scripts/
-```
-
----
-
-## 🔒 보안
-
-### 인증 시스템
-- **바운드 키 인증**: X-Bound-Key 헤더 또는 Authorization Bearer
-- **권한 관리**: realtime, batch 권한 분리
-- **개발 모드**: DEBUG=true일 때만 인증 없는 API 활성화
 
 ---
 
