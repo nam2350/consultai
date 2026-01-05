@@ -58,7 +58,7 @@ class ConsultationAnalysisRequest(BaseModel):
 
     # 모델 티어 선택 (2025-09-17 추가)
     ai_tier: Optional[str] = Field("llm", description="AI 티어 (slm: 실시간용, llm: 배치용)")
-    slm_model: Optional[str] = Field("qwen3", description="SLM 모델 선택 (qwen3: Qwen3-1.7B, midm: Midm-2.0-Mini)")
+    slm_model: Optional[str] = Field("qwen3", description="실시간 LLM 모델 선택 (qwen3: Qwen3-1.7B, midm: Midm-2.0-Mini)")
     llm_model: Optional[str] = Field("qwen3_4b", description="LLM 모델 선택 (qwen3_4b, midm_base, ax_light)")
 
     # 분석 옵션
@@ -163,7 +163,7 @@ class SystemStatus(BaseModel):
 # ========================
 
 class RealtimeAnalysisRequest(BaseModel):
-    """실시간 상담 분석 요청 (SLM 전용)"""
+    """실시간 상담 분석 요청 (실시간 LLM 전용)"""
     bound_key: str = Field(..., description="외부 시스템 바운드 키")
     consultation_id: str = Field(..., description="상담 고유 ID")
     stt_data: STTData = Field(..., description="STT 변환 데이터")
@@ -176,12 +176,11 @@ class RealtimeAnalysisResponse(BaseModel):
     success: bool = Field(..., description="분석 성공 여부")
     consultation_id: str = Field(..., description="상담 고유 ID")
 
-    # 간략 요약 (SLM 생성)
-    summary: Optional[str] = Field(None, description="3줄 구조 간략 요약")
-
-    # 처리 정보
-    processing_time: float = Field(..., description="처리 시간(초)")
-    model: str = Field(..., description="사용된 SLM 모델")
+    # 간략 요약 (실시간 LLM 생성)
+    summary: str = Field(..., description="분석된 상담 요약 (1-2문장)", min_length=1)
+    
+    processing_time: float = Field(..., description="처리 소요 시간 (초)")
+    model: str = Field(..., description="사용된 실시간 LLM 모델")
     timestamp: str = Field(..., description="처리 완료 시각 (ISO 8601)")
 
     # 에러 정보 (실패시)

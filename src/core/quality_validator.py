@@ -32,7 +32,7 @@ class QualityValidator:
         self.semantic_unique_ratio = 0.40
         self.semantic_repeat_threshold = 0.50
 
-        # SLM 완화 기준 (경량 모델용)
+        # 실시간 LLM 완화 기준 (경량 모델용)
         self.slm_accept_threshold = 0.40
         self.slm_semantic_min_tokens = 10
         self.slm_semantic_unique_ratio = 0.25
@@ -173,7 +173,7 @@ class QualityValidator:
     def validate_summary_slm(self,
                             summary: str,
                             original_text: Optional[str] = None) -> Dict[str, Any]:
-        """SLM 전용 요약 검증 (완화된 기준 적용)"""
+        """실시간 LLM 전용 요약 검증 (완화된 기준 적용)"""
         format_check = self.check_format(summary)
         length_check = self.check_length(summary)
 
@@ -213,7 +213,7 @@ class QualityValidator:
         }
 
     def check_semantic_density_slm(self, summary: str) -> Dict[str, Any]:
-        """SLM용 의미 밀도 검사 (완화된 기준)"""
+        """실시간 LLM용 의미 밀도 검사 (완화된 기준)"""
         result = {
             'is_valid': False,
             'token_count': 0,

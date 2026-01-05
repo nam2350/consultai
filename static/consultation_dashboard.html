@@ -850,7 +850,7 @@
                                 <div
                                     style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                                     <input type="radio" name="modelTier" value="slm" style="margin-right: 0.5rem;">
-                                    <span class="tier-name">SLM (실시간 처리)</span>
+                                    <span class="tier-name">LLM (실시간 처리)</span>
                                 </div>
                                 <div class="tier-model">Qwen3-1.7B (빠름)</div>
                             </div>
@@ -877,7 +877,7 @@
                                 <div
                                     style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                                     <input type="radio" name="comparisonTier" value="slm" style="margin-right: 0.5rem;">
-                                    <span class="tier-name">SLM 모델 비교</span>
+                                    <span class="tier-name">실시간 모델 비교</span>
                                 </div>
                                 <div class="tier-model">실시간 처리 모델들 (요약만)</div>
                             </div>
@@ -914,7 +914,7 @@
                     <!-- SLM 모델 비교 옵션 -->
                     <div id="slmCompareOptions" style="display: none;">
                         <div class="form-group">
-                            <label>비교할 SLM 모델 선택 (실시간 처리용)</label>
+                            <label>비교할 실시간 모델 선택 (실시간 처리용)</label>
                             <div class="model-compare-options">
                                 <label class="model-checkbox">
                                     <input type="checkbox" id="compareQwen3_1_7b" value="qwen3_1_7b" checked>
@@ -928,7 +928,7 @@
                                 </label>
                             </div>
                             <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
-                                ⚡ SLM 비교: 실시간 요약 속도와 품질을 중심으로 비교합니다 (카테고리/제목 제외).
+                                ⚡ 실시간 모델 비교: 실시간 요약 속도와 품질을 중심으로 비교합니다 (카테고리/제목 제외).
                             </p>
                         </div>
                     </div>
@@ -936,7 +936,7 @@
 
                 <!-- SLM 모델 선택 -->
                 <div class="form-group model-selection" id="slmModelSelection" style="display: none;">
-                    <label>SLM 모델 선택</label>
+                    <label>실시간 모델 선택</label>
                     <select id="slmModelSelect">
                         <option value="qwen3">Qwen3-1.7B (권장)</option>
                         <option value="midm">Midm-2.0-Mini</option>
@@ -972,7 +972,7 @@
                         </label>
                     </div>
                     <p style="font-size: 0.8rem; color: #666; margin-top: 0.3rem;">
-                        SLM 모드에서는 요약만 생성됩니다.
+                        실시간 모드에서는 요약만 생성됩니다.
                     </p>
                 </div>
 
@@ -1172,7 +1172,7 @@
 
                     // 분석 버튼 텍스트 변경
                     const analyzeBtn = document.getElementById('analyzeBtn');
-                    analyzeBtn.innerHTML = 'SLM 분석';
+                    analyzeBtn.innerHTML = '실시간 분석';
                 } else {
                     // LLM 모드: 모든 체크박스 활성화
                     document.getElementById('includeCategory').disabled = false;
@@ -1751,7 +1751,7 @@
 
             // 선택된 티어 기반 버튼 텍스트 변경
             if (modelTier === 'slm') {
-                analyzeBtn.textContent = 'SLM 분석 중';
+                analyzeBtn.textContent = '실시간 분석 중';
             } else {
                 analyzeBtn.textContent = 'LLM 분석 중';
             }
@@ -1797,11 +1797,11 @@
 
                     // SLM 모델명 설정
                     if (slmModel === 'qwen3') {
-                        selectedModelName = 'Qwen3-1.7B (SLM)';
+                        selectedModelName = 'Qwen3-1.7B (Realtime)';
                     } else if (slmModel === 'midm') {
-                        selectedModelName = 'Midm-2.0-Mini (SLM)';
+                        selectedModelName = 'Midm-2.0-Mini (Realtime)';
                     } else if (slmModel === 'both') {
-                        selectedModelName = 'Qwen3-1.7B + Midm-2.0-Mini (SLM)';
+                        selectedModelName = 'Qwen3-1.7B + Midm-2.0-Mini (Realtime)';
                     }
                 } else {
                     // LLM 기능들
@@ -1922,7 +1922,7 @@
 
                 // 버튼 텍스트 복원
                 if (modelTier === 'slm') {
-                    analyzeBtn.textContent = 'SLM 분석';
+                    analyzeBtn.textContent = '실시간 분석';
                 } else {
                     analyzeBtn.textContent = 'LLM 분석 시작';
                 }
@@ -2140,7 +2140,7 @@
                 // 티어별 완료 메시지
                 const completionMessage = selectedComparisonTier === 'llm'
                     ? `${selectedModels.length}개 LLM 모델 정밀 분석 비교가 완료되었습니다!`
-                    : `${selectedModels.length}개 SLM 모델 실시간 처리 비교가 완료되었습니다!`;
+                    : `${selectedModels.length}개 실시간 모델 실시간 처리 비교가 완료되었습니다!`;
 
                 showMessage(completionMessage, 'success');
 

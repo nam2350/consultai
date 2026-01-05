@@ -562,23 +562,23 @@ class ConsultationService:
             if model_tier == "slm":
                 slm_model = request.slm_model or "qwen3"
                 if slm_model == "qwen3":
-                    return "Qwen3-1.7B (SLM)"
+                    return "Qwen3-1.7B (Realtime)"
                 elif slm_model == "midm":
-                    return "Midm-2.0-Mini (SLM)"
+                    return "Midm-2.0-Mini (Realtime)"
                 elif slm_model == "both":
-                    return "Qwen3-1.7B + Midm-2.0-Mini (SLM)"
+                    return "Qwen3-1.7B + Midm-2.0-Mini (Realtime)"
                 else:
-                    return f"{slm_model.upper()} (SLM)"
+                    return f"{slm_model.upper()} (Realtime)"
             else:  # LLM
                 llm_model = request.llm_model or "qwen3_4b"
                 if llm_model == "qwen3_4b":
-                    return "Qwen3-4B-Instruct-2507 (LLM)"
+                    return "Qwen3-4B-Instruct-2507 (Batch)"
                 elif llm_model == "midm_base":
-                    return "Midm-2.0-Base-Instruct (LLM)"
+                    return "Midm-2.0-Base-Instruct (Batch)"
                 elif llm_model == "ax_light":
-                    return "A.X-4.0-Light (LLM)"
+                    return "A.X-4.0-Light (Batch)"
                 else:
-                    return f"{llm_model.upper()} (LLM)"
+                    return f"{llm_model.upper()} (Batch)"
 
         except Exception as e:
             logger.warning(f"[ConsultationService] Failed to get model display name: {e}")
