@@ -1,37 +1,34 @@
-﻿"""Helper to switch batch (MLM) model selections.
+﻿"""Helper to switch batch model selections.
 
 This refresh replaces the previous copy with a cleaner output and references
-the unified download script (download_models.py).
+the unified download script (scripts/core/download_models.py).
 """
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+import sys
 from pathlib import Path
-from typing import Dict
 
 
-PROJECT_ROOT = Path(__file__).parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.core.model_registry import BATCH_MODELS, MODEL_KEY_ALIASES, ModelSpec
+
 ENV_FILE = PROJECT_ROOT / ".env"
+MODELS_ROOT = PROJECT_ROOT / "models"
+MODEL_REGISTRY = BATCH_MODELS
 
 
-@dataclass(frozen=True)
-class BatchModel:
-    key: str
-    folder: str
-    description: str
-
-    @property
-    def path(self) -> Path:
-        return PROJECT_ROOT / "models" / self.folder
+def normalize_model_key(value: str) -> str:
+    raw = value.strip().lower()
+    return MODEL_KEY_ALIASES.get(raw, raw)
 
 
-MODEL_REGISTRY: Dict[str, BatchModel] = {
-    "ax_4b": BatchModel("ax_4b", "A.X-4.0-Light", "SKT 효율 4B"),
-    "midm_base": BatchModel("midm_base", "Midm-2.0-Base", "Midm 2.0 베이스"),
-    "qwen3_4b": BatchModel("qwen3_4b", "Qwen3-4B", "기본 4B LLM"),
-}
+def get_model_path(spec: ModelSpec) -> Path:
+    return spec.local_dir(MODELS_ROOT)
 
 
 def update_env_file(primary: str, fallback: str | None) -> None:
@@ -73,14 +70,15 @@ def check_model_availability(model_key: str) -> bool:
         return False
 
     required_files = {"config.json", "tokenizer_config.json"}
-    if not spec.path.exists():
+    model_path = get_model_path(spec)
+    if not model_path.exists():
         return False
 
-    existing = {path.name for path in spec.path.iterdir() if path.is_file()}
+    existing = {path.name for path in model_path.iterdir() if path.is_file()}
     if not required_files.issubset(existing):
         return False
 
-    weight_files = list(spec.path.glob("*.safetensors")) + list(spec.path.glob("*.bin"))
+    weight_files = list(model_path.glob("*.safetensors")) + list(model_path.glob("*.bin"))
     return bool(weight_files)
 
 
@@ -90,18 +88,35 @@ def list_available_models() -> None:
     for spec in MODEL_REGISTRY.values():
         available = check_model_availability(spec.key)
         status = "사용 가능" if available else "다운로드 필요"
-        print(f"{spec.key:12s} : {spec.description}")
-        print(f"  경로: {spec.path}")
+        description = spec.description or spec.display_name
+        print(f"{spec.key:12s} : {description}")
+        print(f"  경로: {get_model_path(spec)}")
         print(f"  상태: {status}\n")
-    print("다운로드: python scripts/download_models.py --tier mlm --models <model_key>")
+    print("다운로드: python scripts/core/download_models.py --tier batch --models <model_key>")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="배치 처리 모델 변경")
-    parser.add_argument("--model", choices=list(MODEL_REGISTRY.keys()), help="기본 모델 선택")
-    parser.add_argument("--fallback", choices=list(MODEL_REGISTRY.keys()), help="백업 모델", default=None)
+    parser.add_argument(
+        "--model",
+        type=normalize_model_key,
+        choices=list(MODEL_REGISTRY.keys()),
+        help="기본 모델 선택",
+    )
+    parser.add_argument(
+        "--fallback",
+        type=normalize_model_key,
+        choices=list(MODEL_REGISTRY.keys()),
+        help="백업 모델",
+        default=None,
+    )
     parser.add_argument("--list", action="store_true", help="가용 모델 목록 출력")
-    parser.add_argument("--check", choices=list(MODEL_REGISTRY.keys()), help="특정 모델 가용 여부 확인")
+    parser.add_argument(
+        "--check",
+        type=normalize_model_key,
+        choices=list(MODEL_REGISTRY.keys()),
+        help="특정 모델 가용 여부 확인",
+    )
     return parser.parse_args()
 
 
@@ -119,7 +134,7 @@ def main() -> None:
         status = "사용 가능" if available else "다운로드 필요"
         print(f"{args.check}: {status}")
         if not available:
-            print(f"다운로드 명령: python scripts/download_models.py --models {args.check}")
+            print(f"다운로드 명령: python scripts/core/download_models.py --models {args.check}")
         return
 
     if not args.model:
@@ -131,7 +146,7 @@ def main() -> None:
 
     if not check_model_availability(args.model):
         print(f"모델 {args.model} 이(가) 설치되어 있지 않습니다.")
-        print(f"다운로드 명령: python scripts/download_models.py --models {args.model}")
+        print(f"다운로드 명령: python scripts/core/download_models.py --models {args.model}")
         return
 
     fallback = args.fallback or "qwen3_4b"
@@ -143,7 +158,7 @@ def main() -> None:
 
     print("\n설정 완료!")
     print("서버 재시작 후 새로운 배치 모델이 적용됩니다.")
-    print("다운로드 스크립트: python scripts/download_models.py --tier mlm")
+    print("다운로드 스크립트: python scripts/core/download_models.py --tier batch")
 
 
 if __name__ == "__main__":

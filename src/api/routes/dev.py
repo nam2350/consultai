@@ -23,48 +23,50 @@ from ...schemas.consultation import (
 )
 from ...core.logger import logger
 from ...core.file_processor import extract_conversation_text
+from ...core.config import get_application_settings
 
 # 라우터 생성
 router = APIRouter(prefix="/dev", tags=["개발 전용 (인증 없음)"])
 
-# SLM 서비스 인스턴스 (지연 초기화)
-_slm_service = None
+# Realtime 서비스 인스턴스 (지연 초기화)
+_realtime_service = None
+settings = get_application_settings()
 
 
-async def get_slm_service():
-    """SLM 서비스 인스턴스 반환 (지연 초기화)"""
-    global _slm_service
+async def get_realtime_service():
+    """Realtime 서비스 인스턴스 반환 (지연 초기화)"""
+    global _realtime_service
 
-    if _slm_service is None:
-        logger.info("[개발 API] SLM 서비스 초기화 시작...")
+    if _realtime_service is None:
+        logger.info("[개발 API] Realtime 서비스 초기화 시작...")
 
         # Qwen3-1.7B 모델 로드
-        from ...core.models.qwen3_1_7b.summarizer import Qwen17BSummarizer
+        from ...core.models.qwen3_1_7b.summarizer import Qwen3Summarizer
 
         try:
-            _slm_service = Qwen17BSummarizer(
-                model_path=r"models\Qwen3-1.7B"
+            _realtime_service = Qwen3Summarizer(
+                model_path=settings.REALTIME_MODEL_PATH_QWEN3
             )
 
-            success = _slm_service.load_model()
+            success = _realtime_service.load_model()
 
             if not success:
-                logger.error("[개발 API] SLM 모델 로드 실패")
+                logger.error("[개발 API] Realtime 모델 로드 실패")
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="SLM 모델 초기화 실패"
+                    detail="Realtime 모델 초기화 실패"
                 )
 
-            logger.info(f"[개발 API] SLM 모델 로드 완료: Qwen3-1.7B")
+            logger.info(f"[개발 API] Realtime 모델 로드 완료: Qwen3-1.7B")
 
         except Exception as e:
-            logger.error(f"[개발 API] SLM 서비스 초기화 오류: {e}")
+            logger.error(f"[개발 API] Realtime 서비스 초기화 오류: {e}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"SLM 서비스 초기화 실패: {str(e)}"
+                detail=f"Realtime 서비스 초기화 실패: {str(e)}"
             )
 
-    return _slm_service
+    return _realtime_service
 
 
 @router.post(
@@ -76,7 +78,7 @@ async def get_slm_service():
 
     - **인증 불필요**: 바운드 키 없이 사용 가능
     - **목표 응답시간**: 1-3초
-    - **사용 모델**: Qwen3-1.7B (SLM)
+    - **사용 모델**: Qwen3-1.7B (Realtime)
     - **제공 기능**: 간략 요약 (3줄 구조)
     - **주의**: DEBUG 모드에서만 활성화됩니다
 
@@ -123,12 +125,12 @@ async def dev_realtime_analyze(
                 error_code="DATA_INVALID_STT"
             )
 
-        # 2. SLM 서비스 로드
-        slm_service = await get_slm_service()
+        # 2. Realtime 서비스 로드
+        realtime_service = await get_realtime_service()
 
         # 3. 빠른 요약 생성
-        logger.info(f"[개발 API] SLM 요약 시작 - 대화 길이: {len(conversation_text)}자")
-        result = slm_service.summarize_consultation(conversation_text)
+        logger.info(f"[개발 API] Realtime 요약 시작 - 대화 길이: {len(conversation_text)}자")
+        result = realtime_service.summarize_consultation(conversation_text)
 
         # 4. 결과 검증
         if not result.get('success'):
@@ -193,14 +195,14 @@ async def dev_realtime_analyze(
 )
 async def get_dev_status():
     """개발 전용 API 상태 조회"""
-    global _slm_service
+    global _realtime_service
 
     return {
         "status": "active",
         "warning": "⚠️ 이 엔드포인트는 개발/테스트 전용입니다. 운영 환경에서는 사용하지 마세요.",
         "authentication": "disabled",
-        "model_loaded": _slm_service is not None,
-        "model_name": "Qwen3-1.7B" if _slm_service else None,
+        "model_loaded": _realtime_service is not None,
+        "model_name": "Qwen3-1.7B" if _realtime_service else None,
         "endpoints": {
             "realtime_no_auth": "/api/v1/dev/realtime-analyze-no-auth"
         },

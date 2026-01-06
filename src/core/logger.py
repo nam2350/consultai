@@ -9,6 +9,14 @@ import os
 from loguru import logger
 from src.core.config import settings
 
+# Ensure UTF-8 output to avoid garbled logs on Windows terminals.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
 # 로그 저장을 위한 디렉토리 생성
 os.makedirs("logs", exist_ok=True)
 

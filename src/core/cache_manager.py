@@ -206,9 +206,13 @@ class CacheManager:
         # Redis에서 패턴 매칭 삭제
         if self._redis_client:
             try:
-                keys = self._redis_client.keys(pattern)
-                if keys:
-                    deleted_count += self._redis_client.delete(*keys)
+                keys_to_delete = []
+                for key in self._redis_client.scan_iter(pattern, count=500):
+                    keys_to_delete.append(key)
+
+                for idx in range(0, len(keys_to_delete), 500):
+                    batch = keys_to_delete[idx:idx + 500]
+                    deleted_count += self._redis_client.delete(*batch)
             except Exception as e:
                 logger.warning(f"Redis 카테고리 삭제 실패: {str(e)}")
         

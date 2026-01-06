@@ -12,14 +12,14 @@ ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석하는 플랫�
 
 ## ✨ 주요 기능
 
-### 🚀 듀얼-티어 AI 아키텍처
+### 🚀 듀얼 AI 아키텍처
 
-#### **LLM (실시간 모델)** - 실시간 상담 지원
+#### **실시간용 모델** - 실시간 상담 지원
 - **Qwen3-1.7B**: 100% 성공률, 평균 **2.83초** ⚡
 - **목표**: 1-3초 이내 즉시 요약 제공
-- **용도**: 상담 중 실시간 지원
+- **기능**: 상담 중 실시간 지원
 
-#### **LLM (배치 모델)** - 배치 분석
+#### **배치용 모델** - 배치 분석
 - **Qwen3-4B**: 100% 성공률, 평균 **20.85초**, 품질 **0.990** 🔥
 - **목표**: 15-20초 이내 고품질 분석
 - **기능**: 요약 + 키워드 추출 + 제목 생성
@@ -47,21 +47,17 @@ ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석하는 플랫�
 ### 필수 요구사항
 
 - Python 3.10+
-- CUDA 12.x (GPU 사용 시)
-- 16GB+ RAM (32GB 권장)
+- CUDA 12.8+
+- VRAM 16GB+
 
 ### 설치
 
 ```bash
-# 1. 저장소 클론
-git clone https://github.com/YOUR_USERNAME/consultai.git
-cd consultai
-
-# 2. Conda 환경 생성
+# 1. Conda 환경 생성
 conda create -n consultai python=3.10
 conda activate consultai
 
-# 3. 의존성 설치
+# 2. 의존성 설치
 pip install -r requirements.txt
 ```
 
@@ -75,8 +71,8 @@ python scripts/core/download_models.py
 **옵션 B: 수동 다운로드**
 
 HuggingFace에서 다운로드 후 `models/` 폴더에 저장:
-- [Qwen3-1.7B](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct)
-- [Qwen3-4B](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct)
+- [Qwen3-1.7B](https://huggingface.co/Qwen/Qwen3-1.7B-Instruct)
+- [Qwen3-4B](https://huggingface.co/Qwen/Qwen3-4B-Instruct)
 
 ```
 models/
@@ -94,6 +90,9 @@ PORT=8000
 BOUND_KEYS=your_secure_key_min_20_chars
 EXTERNAL_SYSTEM_KEY=your_key
 ```
+- 프로덕션에서는 `BOUND_KEYS`가 필수입니다 (미설정 시 서버가 시작되지 않습니다).
+- `/api/v1/consultation/test-data`, `/api/v1/consultation/local-files*`는 DEBUG 모드 전용입니다.
+- 선택 설정: `REALTIME_MODEL_PATH_QWEN3`, `GPU_MAX_MEMORY_GB`
 ---
 
 ### API 테스트
@@ -115,11 +114,11 @@ EXTERNAL_SYSTEM_KEY=your_key
 │         FastAPI Application             │
 ├─────────────────────────────────────────┤
 │  실시간 API  │  배치 API  │  개발 API   │
-│   (LLM)     │   (LLM)   │  (No Auth)   │
+│ (Realtime)  │  (Batch)  │  (No Auth)   │
 ├─────────────────────────────────────────┤
 │          AI Analysis Engine             │
 │  ┌──────────┐        ┌──────────┐      │
-│  │ LLM Real │        │ LLM Batch│      │
+│  │ Realtime │        │  Batch  │      │
 │  │ Qwen3    │        │ Qwen3    │      │
 │  └──────────┘        └──────────┘      │
 ├─────────────────────────────────────────┤
@@ -134,8 +133,8 @@ EXTERNAL_SYSTEM_KEY=your_key
 
 | 티어 | 모델 | 성공률 | 평균 시간 | 품질 점수 | 용도 |
 |-----|------|--------|---------|----------|------|
-| LLM (실시간) | Qwen3-1.7B | 100% | 2.83초 | 0.800 | 실시간 지원 |
-| LLM (배치) | Qwen3-4B | 100% | 20.85초 | 0.990 | 배치 분석 |
+| Realtime | Qwen3-1.7B | 100% | 2.83초 | 0.800 | 실시간 지원 |
+| Batch | Qwen3-4B | 100% | 20.85초 | 0.990 | 배치 분석 |
 
 - ✅ 요약 성공률: **100%** (999/999)
 - ✅ 제목 생성 성공률: **91.36%** (856/937)
@@ -146,12 +145,15 @@ EXTERNAL_SYSTEM_KEY=your_key
 ### 테스트 실행
 
 ```bash
-# LLM 테스트 (실시간)
+# 실시간 테스트
 cd scripts
-python local_test_selective_ai.py --model-tier slm --only-summary -c 10
+python local_test_selective_ai.py --model-tier realtime --only-summary -c 10
 
-# LLM 테스트 (배치)
-python local_test_selective_ai.py --model-tier llm -c 10
+# 배치 테스트
+python local_test_selective_ai.py --model-tier batch -c 10
+# ?? ?? ???
+python run_batch_regression.py --count 20
+# (deprecated) python run_llm_regression.py --count 20
 
 # API 테스트
 cd ..

@@ -33,22 +33,13 @@ sys.path.insert(0, str(project_root))
 
 # 필수 모듈들 import
 try:
-    # LLM 모델들 (Large Language Models - 배치 처리용)
+    # Batch models (batch processing)
     from src.core.models.qwen3_4b.summarizer import Qwen2507Summarizer
     from src.core.models.qwen3_4b.classifier import CategoryClassifier
     from src.core.models.qwen3_4b.title_generator import TitleGenerator
 
-    # 모든 LLM 모델들 (대용량 언어 모델)
-    from src.core.models.midm_base.summarizer import MidmBaseSummarizer
-    from src.core.models.midm_base.classifier import CategoryClassifier as Midm_Base_Classifier
-    from src.core.models.midm_base.title_generator import TitleGenerator as Midm_Base_TitleGenerator
-    from src.core.models.ax_light.summarizer import AXLightSummarizer
-    from src.core.models.ax_light.classifier import CategoryClassifier as AX_Light_Classifier
-    from src.core.models.ax_light.title_generator import TitleGenerator as AX_Light_TitleGenerator
-
-    # SLM 모델들 (Small Language Models - 실시간 처리용)
+    # Realtime models (realtime processing)
     from src.core.models.qwen3_1_7b.summarizer import Qwen3Summarizer
-    from src.core.models.midm_mini.summarizer import MidmSummarizer
 
     from src.core.file_processor import load_conversation_from_json
     from src.core.quality_validator import quality_validator
@@ -57,40 +48,26 @@ except ImportError as e:
     print("모든 필수 모듈이 정상적으로 로드되어야 합니다.")
     sys.exit(1)
 
-def print_banner(model_tier: str = 'llm'):
+def print_banner(model_tier: str = 'batch'):
     """프로그램 배너 출력"""
     print("=" * 70)
     print("    AI 상담 분석 선택적 테스트 도구 v1.0.0")
-    if model_tier == 'slm':
-        print("    ?? SLM 모드: 실시간 처리용 (요약만 지원)")
-    elif model_tier == 'all_llm':
-        print("    ?? ALL-LLM 모드: 모든 LLM 모델 비교 테스트")
+    if model_tier == 'realtime':
+        print("    ?? Realtime 모드: 실시간 처리용 (요약만 지원)")
+    elif model_tier == 'all_batch':
+        print("    ?? ALL-Batch 모드: 모든 Batch 모델 비교 테스트")
     else:
-        print("    ?? LLM 모드: 배치 처리용 (요약, 키워드, 제목)")
+        print("    ?? Batch 모드: 배치 처리용 (요약, 키워드, 제목)")
     print("=" * 70)
 
-# LLM 모델 설정 (모든 대용량 언어 모델)
-LLM_MODELS = {
+# Batch 모델 설정 (모든 대용량 언어 모델)
+BATCH_MODELS = {
     'qwen3_4b': {
         'name': 'Qwen3-4B-2507',
         'path': 'models/Qwen3-4B',
         'summarizer_class': Qwen2507Summarizer,
         'classifier_class': CategoryClassifier,
         'title_generator_class': TitleGenerator
-    },
-    'midm_base': {
-        'name': 'Midm-2.0-Base-Instruct',
-        'path': 'models/Midm-2.0-Base',
-        'summarizer_class': MidmBaseSummarizer,
-        'classifier_class': Midm_Base_Classifier,
-        'title_generator_class': Midm_Base_TitleGenerator
-    },
-    'ax_light': {
-        'name': 'A.X-4.0-Light',
-        'path': 'models/A.X-4.0-Light',
-        'summarizer_class': AXLightSummarizer,
-        'classifier_class': AX_Light_Classifier,
-        'title_generator_class': AX_Light_TitleGenerator
     },
 }
 
@@ -251,74 +228,17 @@ def parse_feature_args(args) -> Dict[str, bool]:
     
     return selections
 
-def process_file_with_both_slm_models(file_path: str, selections: Dict[str, bool], output_dir: Path, idx: int, total: int) -> List[Dict[str, Any]]:
-    """SLM 양쪽 모델로 파일 처리 (Qwen3-1.7B와 Midm-Mini)"""
-    results = []
-
-    # Qwen3-1.7B 모델로 처리
-    print(f"  [1/2] Qwen3-1.7B 모델로 처리 중...")
-    qwen3_model_path = str(Path(__file__).parent.parent / "models" / "Qwen3-1.7B")
-    qwen3_summarizer = Qwen3Summarizer(qwen3_model_path)
-
-    qwen3_result = None
-    if qwen3_summarizer.load_model():
-        qwen3_result = process_file(file_path, qwen3_summarizer, None, None, selections)
-        qwen3_result['model_name'] = "Qwen3-1.7B"
-        qwen3_result['model_type'] = "qwen3"
-        results.append(qwen3_result)
-
-        if qwen3_result['success']:
-            print(f"     [OK] Qwen3-1.7B 처리 완료 ({qwen3_result['processing_time']:.2f}초)")
-        else:
-            print(f"     [FAIL] Qwen3-1.7B 처리 실패: {qwen3_result.get('error', 'Unknown error')}")
-
-        qwen3_summarizer.cleanup()
-    else:
-        print(f"     [FAIL] Qwen3-1.7B 모델 로드 실패")
-        qwen3_result = {'success': False, 'error': 'Qwen3-1.7B 모델 로드 실패', 'model_name': 'Qwen3-1.7B', 'model_type': 'qwen3'}
-        results.append(qwen3_result)
-
-    # Midm-Mini 모델로 처리
-    print(f"  [2/2] Midm-Mini 모델로 처리 중...")
-    midm_model_path = str(Path(__file__).parent.parent / "models" / "Midm-2.0-Mini")
-    midm_summarizer = MidmSummarizer(midm_model_path)
-
-    midm_result = None
-    if midm_summarizer.load_model():
-        midm_result = process_file(file_path, midm_summarizer, None, None, selections)
-        midm_result['model_name'] = "Midm-2.0-Mini"
-        midm_result['model_type'] = "midm"
-        results.append(midm_result)
-
-        if midm_result['success']:
-            print(f"     [OK] Midm-Mini 처리 완료 ({midm_result['processing_time']:.2f}초)")
-        else:
-            print(f"     [FAIL] Midm-Mini 처리 실패: {midm_result.get('error', 'Unknown error')}")
-
-        midm_summarizer.cleanup()
-    else:
-        print(f"     [FAIL] Midm-Mini 모델 로드 실패")
-        midm_result = {'success': False, 'error': 'Midm-Mini 모델 로드 실패', 'model_name': 'Midm-2.0-Mini', 'model_type': 'midm'}
-        results.append(midm_result)
-
-    # 두 모델 결과를 하나의 파일로 저장
-    if qwen3_result and midm_result:
-        save_dual_model_result(qwen3_result, midm_result, selections, output_dir, idx, total)
-        print(f"     >> 듀얼 모델 결과 저장 완료 (1개 통합 파일)")
-
-    return results
-
-def process_file_with_all_llm_models(file_path: str, selections: Dict[str, bool], output_dir: Path, idx: int, total: int) -> List[Dict[str, Any]]:
-    """모든 LLM 모델로 파일 처리"""
+def process_file_with_all_batch_models(file_path: str, selections: Dict[str, bool], output_dir: Path, idx: int, total: int) -> List[Dict[str, Any]]:
+    """모든 Batch 모델로 파일 처리"""
     print(f"\n?? 파일 [{idx}/{total}]: {os.path.basename(file_path)}")
     print("=" * 60)
 
     all_results = []
     successful_results = []
 
-    # 모든 LLM 모델로 순차 처리
-    for model_id, model_config in LLM_MODELS.items():
-        print(f"\n?? [{len(successful_results)+1}/{len(LLM_MODELS)}] {model_config['name']} 모델 처리 중...")
+    # 모든 Batch 모델로 순차 처리
+    for model_id, model_config in BATCH_MODELS.items():
+        print(f"\n?? [{len(successful_results)+1}/{len(BATCH_MODELS)}] {model_config['name']} 모델 처리 중...")
 
         try:
             # 모델 경로 설정
@@ -372,15 +292,15 @@ def process_file_with_all_llm_models(file_path: str, selections: Dict[str, bool]
 
     # 모든 모델 결과를 하나의 파일로 저장
     if successful_results:
-        save_all_llm_results(successful_results, selections, output_dir, idx, total)
-        print(f"\n?? 모든 LLM 모델 결과 저장 완료 ({len(successful_results)}/{len(LLM_MODELS)}개 성공)")
+        save_all_batch_results(successful_results, selections, output_dir, idx, total)
+        print(f"\n?? 모든 Batch 모델 결과 저장 완료 ({len(successful_results)}/{len(BATCH_MODELS)}개 성공)")
     else:
-        print(f"\n? 모든 LLM 모델 처리 실패")
+        print(f"\n? 모든 Batch 모델 처리 실패")
 
     return all_results
 
-def save_all_llm_results(results: List[Dict[str, Any]], selections: Dict[str, bool], output_dir: Path, idx: int, total: int):
-    """모든 LLM 모델의 결과를 하나의 파일에 저장"""
+def save_all_batch_results(results: List[Dict[str, Any]], selections: Dict[str, bool], output_dir: Path, idx: int, total: int):
+    """모든 Batch 모델의 결과를 하나의 파일에 저장"""
     if not results:
         return
 
@@ -397,11 +317,11 @@ def save_all_llm_results(results: List[Dict[str, Any]], selections: Dict[str, bo
     # 파일명 생성
     base_name = results[0]['file'].replace('.json', '')
     file_timestamp = datetime.now().strftime('%H%M%S')
-    all_llm_file = output_dir / f"{base_name}_ALLLLM_{feature_str}_{file_timestamp}.txt"
+    all_batch_file = output_dir / f"{base_name}_ALLBATCH_{feature_str}_{file_timestamp}.txt"
 
     # 파일 저장
-    with open(all_llm_file, 'w', encoding='utf-8') as f:
-        f.write(f"?? ALL-LLM 모드: 모든 LLM 모델 비교 결과\n")
+    with open(all_batch_file, 'w', encoding='utf-8') as f:
+        f.write(f"?? ALL-Batch 모드: 모든 Batch 모델 비교 결과\n")
         f.write(f"=" * 80 + "\n")
         f.write(f"?? 파일명: {results[0]['file']}\n")
         f.write(f"?? 처리 순서: [{idx}/{total}]\n")
@@ -635,119 +555,7 @@ def load_checkpoint(checkpoint_file: Path) -> tuple:
         print(f"??  체크포인트 로드 실패: {e}")
         return [], []
 
-def save_dual_model_result(qwen3_result: Dict, midm_result: Dict, selections: Dict[str, bool], output_dir: Path, idx: int, total: int):
-    """두 SLM 모델 결과를 하나의 파일에 저장"""
-
-    # 선택된 기능 표시
-    features = []
-    if selections['summary']:
-        features.append('S')
-    if selections['keywords']:
-        features.append('K')
-    if selections['titles']:
-        features.append('T')
-    feature_str = ''.join(features) if features else 'NONE'
-
-    # 파일명 생성 (both 모델 표시)
-    base_name = qwen3_result['file'].replace('.json', '') if qwen3_result else midm_result['file'].replace('.json', '')
-    file_timestamp = datetime.now().strftime('%H%M%S')
-    individual_file = output_dir / f"{base_name}_SLM_both_{feature_str}_{file_timestamp}.txt"
-
-    # 전체 처리 시간 계산
-    total_processing_time = 0
-    if qwen3_result.get('success', False):
-        total_processing_time += qwen3_result.get('processing_time', 0)
-    if midm_result.get('success', False):
-        total_processing_time += midm_result.get('processing_time', 0)
-
-    # 파일 저장
-    with open(individual_file, 'w', encoding='utf-8') as f:
-        f.write(f"AI 상담 분석 결과 (듀얼 SLM 모델) - {base_name}.json\n")
-        f.write(f"=" * 70 + "\n")
-        f.write(f"처리 순서: [{idx}/{total}]\n")
-        f.write(f"처리 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"테스트 기능: {', '.join([k for k, v in selections.items() if v])}\n")
-        f.write(f"사용 모델: Qwen3-1.7B + Midm-2.0-Mini\n")
-        f.write(f"전체 처리시간: {total_processing_time:.2f}초\n")
-
-        # 대화 길이 (공통)
-        conversation_length = qwen3_result.get('conversation_length', 0) or midm_result.get('conversation_length', 0)
-        f.write(f"대화 길이: {conversation_length}자\n")
-        f.write("\n" + "=" * 70 + "\n\n")
-
-        # Qwen3-1.7B 결과
-        f.write(f"[1] Qwen3-1.7B 결과\n")
-        f.write("-" * 70 + "\n")
-
-        if qwen3_result.get('success', False):
-            f.write(f"처리시간: {qwen3_result.get('processing_time', 0):.2f}초\n")
-            f.write(f"AI 요약시간: {qwen3_result.get('ai_summary_time', 0):.2f}초\n")
-
-            # Qwen3 요약
-            if selections['summary'] and 'summary' in qwen3_result.get('results', {}):
-                summary = qwen3_result['results']['summary']
-                f.write(f"\n== 요약 ({len(summary)}자) ==\n")
-                f.write(f"{summary}\n")
-
-            # 품질 평가
-            if 'quality_score' in qwen3_result:
-                f.write(f"\n품질점수: {qwen3_result['quality_score']:.3f}/1.000\n")
-                if 'warnings' in qwen3_result and qwen3_result['warnings']:
-                    f.write(f"경고사항:\n")
-                    for warning in qwen3_result['warnings']:
-                        f.write(f"  - {warning}\n")
-        else:
-            f.write(f"처리 실패: {qwen3_result.get('error', 'Unknown error')}\n")
-
-        f.write("\n\n")
-
-        # Midm-Mini 결과
-        f.write(f"[2] Midm-2.0-Mini 결과\n")
-        f.write("-" * 70 + "\n")
-
-        if midm_result.get('success', False):
-            f.write(f"처리시간: {midm_result.get('processing_time', 0):.2f}초\n")
-            f.write(f"AI 요약시간: {midm_result.get('ai_summary_time', 0):.2f}초\n")
-
-            # Midm 요약
-            if selections['summary'] and 'summary' in midm_result.get('results', {}):
-                summary = midm_result['results']['summary']
-                f.write(f"\n== 요약 ({len(summary)}자) ==\n")
-                f.write(f"{summary}\n")
-
-            # 품질 평가
-            if 'quality_score' in midm_result:
-                f.write(f"\n품질점수: {midm_result['quality_score']:.3f}/1.000\n")
-                if 'warnings' in midm_result and midm_result['warnings']:
-                    f.write(f"경고사항:\n")
-                    for warning in midm_result['warnings']:
-                        f.write(f"  - {warning}\n")
-        else:
-            f.write(f"처리 실패: {midm_result.get('error', 'Unknown error')}\n")
-
-        f.write("\n\n")
-
-        # 모델 비교 요약
-        f.write(f"[비교] 모델 비교 요약\n")
-        f.write("-" * 70 + "\n")
-
-        if qwen3_result.get('success', False) and midm_result.get('success', False):
-            qwen3_summary = qwen3_result.get('results', {}).get('summary', '')
-            midm_summary = midm_result.get('results', {}).get('summary', '')
-
-            f.write(f"Qwen3-1.7B 요약 길이: {len(qwen3_summary)}자\n")
-            f.write(f"Midm-Mini 요약 길이: {len(midm_summary)}자\n")
-            f.write(f"Qwen3 처리시간: {qwen3_result.get('processing_time', 0):.2f}초\n")
-            f.write(f"Midm 처리시간: {midm_result.get('processing_time', 0):.2f}초\n")
-            f.write(f"Qwen3 품질점수: {qwen3_result.get('quality_score', 0):.3f}\n")
-            f.write(f"Midm 품질점수: {midm_result.get('quality_score', 0):.3f}\n")
-        else:
-            f.write(f"Qwen3 성공 여부: {qwen3_result.get('success', False)}\n")
-            f.write(f"Midm 성공 여부: {midm_result.get('success', False)}\n")
-
-        f.write("\n" + "=" * 70 + "\n")
-
-def save_individual_result_with_model(result: Dict, selections: Dict[str, bool], output_dir: Path, idx: int, total: int, model_tier: str = 'llm', model_name: str = ''):
+def save_individual_result_with_model(result: Dict, selections: Dict[str, bool], output_dir: Path, idx: int, total: int, model_tier: str = 'batch', model_name: str = ''):
     """개별 통화 결과를 모델명과 함께 즉시 저장"""
     if not result['success']:
         return
@@ -763,7 +571,7 @@ def save_individual_result_with_model(result: Dict, selections: Dict[str, bool],
     feature_str = ''.join(features) if features else 'NONE'
 
     # 모델 티어 및 모델명 표시
-    tier_str = model_tier.upper()  # SLM 또는 LLM
+    tier_str = model_tier.upper()  # Realtime 또는 Batch
     model_suffix = f"_{model_name}" if model_name else ""
 
     # 파일명 생성
@@ -839,7 +647,7 @@ def save_individual_result_with_model(result: Dict, selections: Dict[str, bool],
 
         f.write("=" * 60 + "\n")
 
-def save_individual_result(result: Dict, selections: Dict[str, bool], output_dir: Path, idx: int, total: int, model_tier: str = 'llm'):
+def save_individual_result(result: Dict, selections: Dict[str, bool], output_dir: Path, idx: int, total: int, model_tier: str = 'batch'):
     """개별 통화 결과를 즉시 저장"""
     if not result['success']:
         return
@@ -855,7 +663,7 @@ def save_individual_result(result: Dict, selections: Dict[str, bool], output_dir
     feature_str = ''.join(features) if features else 'NONE'
 
     # 모델 티어 표시
-    tier_str = model_tier.upper()  # SLM 또는 LLM
+    tier_str = model_tier.upper()  # Realtime 또는 Batch
 
     # 파일명 생성
     base_name = result['file'].replace('.json', '')
@@ -1034,6 +842,11 @@ def save_results(results: List[Dict], selections: Dict[str, bool], output_dir: P
     print(f"  - 통합 TXT: {txt_file}")
     print(f"  - 개별 파일: {output_dir}/ ({sum(1 for r in results if r['success'])}개 파일)")
 
+def normalize_model_tier(value: str) -> str:
+    raw = value.strip().lower()
+    return {"all_batch": "all-batch"}.get(raw, raw)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='AI 상담 분석 선택적 테스트 - 웹 대시보드처럼 기능을 선택해서 테스트',
@@ -1144,20 +957,29 @@ def main():
                        help='Long-Call chunk overlap characters (default: 120)')
 
     # Model tier selection
-    parser.add_argument('--model-tier', choices=['slm', 'llm', 'all-llm'], default='llm',
-                       help='모델 티어 선택: slm (Small Language Model, 실시간용), llm (Large Language Model, 배치용, 기본값), all-llm (모든 LLM 모델 비교 테스트)')
+    parser.add_argument(
+        '--model-tier',
+        type=normalize_model_tier,
+        choices=['realtime', 'batch', 'all-batch'],
+        default='batch',
+        help='모델 티어 선택: realtime (실시간용), batch (배치용, 기본값), all-batch (모든 배치 모델 비교 테스트)',
+    )
 
     # 간단한 날짜 폴더 선택 옵션
     parser.add_argument('--test-date', type=str,
                        help='테스트할 날짜 폴더 (YYYY-MM-DD 형식). 해당 날짜 폴더의 모든 파일을 테스트합니다.')
 
-    # SLM 모델 선택 옵션
-    parser.add_argument('--slm-model', choices=['qwen3', 'midm', 'both'], default='qwen3',
-                       help='SLM 모델 선택: qwen3 (Qwen3-1.7B), midm (Midm-2.0-Mini), both (두 모델 모두 테스트)')
-
+    # Realtime 모델 선택 옵션
+    parser.add_argument(
+        '--realtime-model',
+        dest='realtime_model',
+        choices=['qwen3'],
+        default='qwen3',
+        help='Realtime 모델 선택: qwen3 (Qwen3-1.7B)',
+    )
     args = parser.parse_args()
 
-    print_banner(args.model_tier if args.model_tier != 'all-llm' else 'all_llm')
+    print_banner(args.model_tier if args.model_tier != 'all-batch' else 'all_batch')
 
     # Apply Long-Call Mode environment settings so summarizer can pick them up
     try:
@@ -1202,56 +1024,47 @@ def main():
         
         # 요약이나 다른 기능이 필요한 경우 summarizer 로드
         if any(selections.values()):
-            if args.model_tier == 'slm':
-                print("  ?? SLM 모델 로드 중 (실시간 처리용)...")
+            if args.model_tier == 'realtime':
+                print("  ?? Realtime 모델 로드 중 (실시간 처리용)...")
 
-                # SLM 모델 선택에 따라 로드
-                if args.slm_model == 'qwen3':
-                    slm_model_path = str(project_root / "models" / "Qwen3-1.7B")
-                    summarizer = Qwen3Summarizer(slm_model_path)
-                    model_name = "Qwen3-1.7B"
-                elif args.slm_model == 'midm':
-                    slm_model_path = str(project_root / "models" / "Midm-2.0-Mini")
-                    summarizer = MidmSummarizer(slm_model_path)
-                    model_name = "Midm-2.0-Mini"
-                else:  # both - 첫 번째 테스트는 Qwen3로 시작
-                    slm_model_path = str(project_root / "models" / "Qwen3-1.7B")
-                    summarizer = Qwen3Summarizer(slm_model_path)
-                    model_name = "Qwen3-1.7B (첫 번째)"
+                # Realtime 모델 로드
+                realtime_model_path = str(project_root / "models" / "Qwen3-1.7B")
+                summarizer = Qwen3Summarizer(realtime_model_path)
+                model_name = "Qwen3-1.7B"
 
                 if not summarizer.load_model():
-                    print("  ? SLM 모델 로드 실패")
+                    print("  ? Realtime 모델 로드 실패")
                     return
-                print(f"  + SLM 모델 로드 완료 ({model_name})")
+                print(f"  + Realtime 모델 로드 완료 ({model_name})")
 
-                # SLM은 요약만 지원
+                # Realtime은 요약만 지원
                 if selections['keywords'] or selections['titles']:
-                    print("  ??  SLM은 요약만 지원합니다. 키워드/제목은 건너뜁니다.")
+                    print("  ??  Realtime은 요약만 지원합니다. 키워드/제목은 건너뜁니다.")
                     selections['keywords'] = False
                     selections['titles'] = False
 
-            elif args.model_tier == 'all-llm':
-                print("  ?? ALL-LLM 모드: 모든 LLM 모델 순차 테스트...")
-                print(f"  대상 모델: {len(LLM_MODELS)}개")
-                for model_id, model_config in LLM_MODELS.items():
+            elif args.model_tier == 'all-batch':
+                print("  ?? ALL-Batch 모드: 모든 Batch 모델 순차 테스트...")
+                print(f"  대상 모델: {len(BATCH_MODELS)}개")
+                for model_id, model_config in BATCH_MODELS.items():
                     print(f"    - {model_config['name']}")
-                print("  + ALL-LLM 모드 준비 완료")
+                print("  + ALL-Batch 모드 준비 완료")
 
-                # ALL-LLM 모드에서는 개별 모델 로드하지 않음
+                # ALL-Batch 모드에서는 개별 모델 로드하지 않음
                 summarizer = None
                 classifier = None
                 generator = None
 
-            else:  # LLM
-                print("  ?? LLM 모델 로드 중 (배치 처리용)...")
+            else:  # Batch
+                print("  ?? Batch 모델 로드 중 (배치 처리용)...")
                 summarizer = Qwen2507Summarizer(model_path)
                 if not summarizer.load_model():
-                    print("  ? LLM 모델 로드 실패")
+                    print("  ? Batch 모델 로드 실패")
                     return
-                print("  + LLM 모델 로드 완료 (Qwen3-4B)")
+                print("  + Batch 모델 로드 완료 (Qwen3-4B)")
 
-        # ALL-LLM 모드가 아닌 경우에만 개별 컴포넌트 초기화
-        if args.model_tier != 'all-llm':
+        # ALL-Batch 모드가 아닌 경우에만 개별 컴포넌트 초기화
+        if args.model_tier != 'all-batch':
             # 키워드 추천기
             if selections['keywords']:
                 print("  ???  키워드 추천기 초기화...")
@@ -1342,8 +1155,8 @@ def main():
         print("\n??  처리할 파일이 없습니다.")
         return
     
-    # 출력 디렉토리 구조: SLM_test/LLM_test > 오늘날짜 폴더
-    model_folder = "SLM_test" if args.model_tier == 'slm' else "LLM_test"
+    # 출력 디렉토리 구조: realtime_test/batch_test > 오늘날짜 폴더
+    model_folder = "realtime_test" if args.model_tier == 'realtime' else "batch_test"
 
     # 출력 폴더명은 항상 테스트 실행 날짜(오늘)로 설정
     if args.output_folder:
@@ -1355,7 +1168,7 @@ def main():
         if args.output_suffix:
             output_date = f"{output_date}{args.output_suffix}"
 
-    # 출력 디렉토리: scripts/outputs/SLM_test|LLM_test/오늘날짜/
+    # 출력 디렉토리: scripts/outputs/realtime_test|batch_test/오늘날짜/
     output_dir = project_root / "scripts" / "outputs" / model_folder / output_date
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1422,43 +1235,23 @@ def main():
         
         print(f"\n[{idx}/{len(files_to_process) + len(processed_files)}] 처리 중: {os.path.basename(file_path)}")
 
-        # ALL-LLM 모드 처리
-        if args.model_tier == 'all-llm':
-            # 모든 LLM 모델로 처리하고 하나의 파일에 결과 저장
-            all_llm_results = process_file_with_all_llm_models(file_path, selections, output_dir, idx, len(files_to_process) + len(processed_files))
+        # ALL-Batch 모드 처리
+        if args.model_tier == 'all-batch':
+            # 모든 Batch 모델로 처리하고 하나의 파일에 결과 저장
+            all_batch_results = process_file_with_all_batch_models(file_path, selections, output_dir, idx, len(files_to_process) + len(processed_files))
 
             # 통계를 위해 첫 번째 성공한 결과를 메인 결과로 사용
-            successful_results = [r for r in all_llm_results if r['success']]
+            successful_results = [r for r in all_batch_results if r['success']]
             if successful_results:
                 result = successful_results[0]
-                results.extend(all_llm_results)  # 모든 결과를 결과 리스트에 추가
-                print(f"  >> ALL-LLM 모델 결과 저장 완료 ({len(successful_results)}/{len(LLM_MODELS)}개 성공)")
+                results.extend(all_batch_results)  # 모든 결과를 결과 리스트에 추가
+                print(f"  >> ALL-Batch 모델 결과 저장 완료 ({len(successful_results)}/{len(BATCH_MODELS)}개 성공)")
             else:
-                result = {'success': False, 'error': '모든 LLM 모델 실패'}
+                result = {'success': False, 'error': '모든 Batch 모델 실패'}
                 results.append(result)
-                print(f"  ? 모든 LLM 모델 처리 실패")
+                print(f"  ? 모든 Batch 모델 처리 실패")
 
             processed_files.append(os.path.basename(file_path))
-
-        # SLM 'both' 모드 처리
-        elif args.model_tier == 'slm' and args.slm_model == 'both':
-            # 양쪽 모델로 처리하고 각각 결과 저장
-            both_results = process_file_with_both_slm_models(file_path, selections, output_dir, idx, len(files_to_process) + len(processed_files))
-
-            # 통계를 위해 첫 번째 결과를 메인 결과로 사용
-            if both_results:
-                result = both_results[0]
-                results.extend(both_results)  # 모든 결과를 결과 리스트에 추가
-            else:
-                result = {'success': False, 'error': '양쪽 모델 모두 실패'}
-                results.append(result)
-
-            processed_files.append(os.path.basename(file_path))
-
-            if result['success']:
-                print(f"  >> 듀얼 모델 결과 저장 완료 (1개 통합 파일)")
-            else:
-                print(f"  ERROR: 처리 실패: {result.get('error', 'Unknown error')}")
 
         else:
             # 기존 단일 모델 처리
@@ -1472,8 +1265,8 @@ def main():
                 print(f"  ??  전체: {total_time:.2f}초 | AI요약: {ai_time:.2f}초")
                 # 개별 파일 즉시 저장
                 model_name = ""
-                if args.model_tier == 'slm':
-                    model_name = args.slm_model
+                if args.model_tier == 'realtime':
+                    model_name = args.realtime_model
                 save_individual_result_with_model(result, selections, output_dir, idx, len(files_to_process) + len(processed_files), args.model_tier, model_name)
                 print(f"  >> 결과 저장 완료")
             else:

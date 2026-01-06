@@ -1,4 +1,4 @@
-"""Qwen3-1.7B SLM summarizer."""
+"""Qwen3-1.7B realtime summarizer."""
 
 import time
 from typing import Any, Dict
@@ -11,7 +11,7 @@ MIN_NEW_TOKENS = 16  # Ensures a short but non-empty completion.
 
 
 class Qwen3Summarizer:
-    """Generate lightweight summaries with Qwen3-1.7B (SLM tier)."""
+    """Generate lightweight summaries with Qwen3-1.7B (realtime tier)."""
 
     def __init__(self, model_path: str):
         self.model_path = model_path
@@ -255,4 +255,4 @@ class Qwen3Summarizer:
 
 if __name__ == "__main__":
     print("[ERROR] 가벼운 요약기는 스크립트로 직접 실행하지 마세요")
-    print("[INFO] scripts/test_slm_summary_all.py 를 통해 호출해 주세요")
+    print("[INFO] scripts/local_test_selective_ai.py 를 통해 호출해 주세요")

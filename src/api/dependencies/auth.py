@@ -3,7 +3,7 @@
 """
 
 from typing import Optional, Dict, Any
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, status, Depends
 
 from ...core.auth import validate_bound_key, check_permission
 from ...core.logger import logger
@@ -77,7 +77,7 @@ async def verify_bound_key(
 
 
 async def verify_realtime_permission(
-    key_info: Dict[str, Any] = None
+    key_info: Dict[str, Any] = Depends(verify_bound_key)
 ) -> Dict[str, Any]:
     """
     실시간 처리 권한 검증 의존성
@@ -117,7 +117,7 @@ async def verify_realtime_permission(
 
 
 async def verify_batch_permission(
-    key_info: Dict[str, Any] = None
+    key_info: Dict[str, Any] = Depends(verify_bound_key)
 ) -> Dict[str, Any]:
     """
     배치 처리 권한 검증 의존성

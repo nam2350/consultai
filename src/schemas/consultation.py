@@ -1,9 +1,14 @@
 """
 상담 분석 API용 Pydantic 스키마 정의
 """
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+import logging
 from datetime import datetime
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import AliasChoices, BaseModel, Field, field_validator
+from src.core.model_registry import BATCH_TIER, REALTIME_TIER
+
+logger = logging.getLogger(__name__)
 
 # ========================
 # STT 데이터 관련 스키마
@@ -28,7 +33,17 @@ class STTData(BaseModel):
     conversation_text: Optional[str] = Field(None, description="완성된 대화 텍스트")
     segments: Optional[List[STTSegment]] = Field(None, description="세그먼트 형식 데이터")
     utterances: Optional[List[STTUtterance]] = Field(None, description="발화 형식 데이터")
-    raw_data: Optional[Dict[str, Any]] = Field(None, description="기타 STT 형식 데이터")
+    raw_data: Optional[Dict[str, Any]] = Field(
+        None,
+        description="기타 STT 형식 데이터",
+        validation_alias=AliasChoices("raw_data", "raw_call_data"),
+    )
+
+    model_config = {"populate_by_name": True}
+
+    @property
+    def raw_call_data(self) -> Optional[Dict[str, Any]]:
+        return self.raw_data
 
 # ========================
 # 분석 옵션 스키마
@@ -57,12 +72,36 @@ class ConsultationAnalysisRequest(BaseModel):
     existing_title: Optional[str] = Field(None, description="기존 제목")
 
     # 모델 티어 선택 (2025-09-17 추가)
-    ai_tier: Optional[str] = Field("llm", description="AI 티어 (slm: 실시간용, llm: 배치용)")
-    slm_model: Optional[str] = Field("qwen3", description="실시간 LLM 모델 선택 (qwen3: Qwen3-1.7B, midm: Midm-2.0-Mini)")
-    llm_model: Optional[str] = Field("qwen3_4b", description="LLM 모델 선택 (qwen3_4b, midm_base, ax_light)")
+    ai_tier: Optional[str] = Field("batch", description="AI 티어 (realtime: 실시간용, batch: 배치용)")
+    realtime_model: Optional[str] = Field(
+        "qwen3",
+        description="실시간용 모델 선택 (qwen3: Qwen3-1.7B)",
+        validation_alias=AliasChoices("realtime_model"),
+    )
+    batch_model: Optional[Literal["qwen3_4b"]] = Field(
+        "qwen3_4b",
+        description="배치용 모델 선택 (qwen3_4b)",
+        validation_alias=AliasChoices("batch_model"),
+    )
 
     # 분석 옵션
     options: AnalysisOptions = Field(default_factory=AnalysisOptions, description="분석 옵션")
+
+    model_config = {"populate_by_name": True}
+
+    @field_validator("ai_tier", mode="before")
+    def normalize_ai_tier(cls, value):
+        if value is None:
+            return BATCH_TIER
+        raw = str(value).strip().lower()
+        if not raw:
+            return BATCH_TIER
+        if raw in (REALTIME_TIER, BATCH_TIER):
+            return raw
+        logger.warning(
+            "[ConsultationSchema] Unsupported ai_tier value received; use 'realtime' or 'batch'."
+        )
+        return raw
 
 # ========================
 # 응답 관련 스키마  
@@ -155,6 +194,22 @@ class SystemStatus(BaseModel):
     uptime: float = Field(..., description="가동 시간(초)")
     processed_consultations: int = Field(0, description="처리된 상담 수")
     average_processing_time: float = Field(0.0, description="평균 처리 시간(초)")
+    service_initialized: Optional[bool] = Field(
+        None,
+        description="서비스 초기화 상태",
+    )
+    statistics: Optional[Dict[str, Any]] = Field(
+        None,
+        description="서비스 처리 통계",
+    )
+    ai_analyzer_status: Optional[Dict[str, Any]] = Field(
+        None,
+        description="AI analyzer 상태 정보",
+    )
+    legacy_input_counts: Optional[Dict[str, int]] = Field(
+        None,
+        description="레거시 입력 카운트",
+    )
     
     model_config = {"protected_namespaces": ()}
 
@@ -163,7 +218,7 @@ class SystemStatus(BaseModel):
 # ========================
 
 class RealtimeAnalysisRequest(BaseModel):
-    """실시간 상담 분석 요청 (실시간 LLM 전용)"""
+    """실시간 상담 분석 요청 (실시간용 모델 전용)"""
     bound_key: str = Field(..., description="외부 시스템 바운드 키")
     consultation_id: str = Field(..., description="상담 고유 ID")
     stt_data: STTData = Field(..., description="STT 변환 데이터")
@@ -176,11 +231,11 @@ class RealtimeAnalysisResponse(BaseModel):
     success: bool = Field(..., description="분석 성공 여부")
     consultation_id: str = Field(..., description="상담 고유 ID")
 
-    # 간략 요약 (실시간 LLM 생성)
-    summary: str = Field(..., description="분석된 상담 요약 (1-2문장)", min_length=1)
+    # 간략 요약 (실시간용 모델 생성)
+    summary: Optional[str] = Field(None, description="분석된 상담 요약 (1-2문장)")
     
     processing_time: float = Field(..., description="처리 소요 시간 (초)")
-    model: str = Field(..., description="사용된 실시간 LLM 모델")
+    model: str = Field(..., description="사용된 실시간용 모델")
     timestamp: str = Field(..., description="처리 완료 시각 (ISO 8601)")
 
     # 에러 정보 (실패시)
@@ -192,14 +247,18 @@ class RealtimeAnalysisResponse(BaseModel):
 # ========================
 
 class AsyncBatchAnalysisRequest(BaseModel):
-    """비동기 배치 분석 요청 (LLM 전용)"""
+    """비동기 배치 분석 요청 (배치용 모델 전용)"""
     bound_key: str = Field(..., description="외부 시스템 바운드 키")
     batch_id: str = Field(..., description="배치 고유 ID")
     consultations: List[Dict[str, Any]] = Field(..., description="상담 데이터 목록 (최대 20개)")
     callback_url: str = Field(..., description="결과 전송할 콜백 URL")
 
     # 선택적 설정
-    llm_model: Optional[str] = Field("qwen3_4b", description="LLM 모델 (qwen3_4b, ax_light)")
+    batch_model: Optional[Literal["qwen3_4b"]] = Field(
+        "qwen3_4b",
+        description="배치용 모델 (qwen3_4b)",
+        validation_alias=AliasChoices("batch_model"),
+    )
     priority: Optional[int] = Field(1, description="우선순위 (1: 높음, 2: 중간, 3: 낮음)")
 
 class AsyncBatchAnalysisResponse(BaseModel):

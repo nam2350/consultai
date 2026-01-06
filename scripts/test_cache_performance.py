@@ -45,8 +45,8 @@ class CachePerformanceTester:
                 "stt_data": {
                     "conversation_text": conversation_text
                 },
-                "ai_tier": "llm",
-                "llm_model": "qwen3_4b",
+                "ai_tier": "batch",
+                "batch_model": "qwen3_4b",
                 "options": {
                     "include_summary": True,
                     "include_category_recommendation": True,

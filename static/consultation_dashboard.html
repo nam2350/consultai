@@ -837,20 +837,20 @@
                     <div class="form-group">
                         <label>AI 모델 티어</label>
                         <div class="tier-selection">
-                            <div class="tier-option selected" id="llmTier" onclick="selectTier('llm')">
+                            <div class="tier-option selected" id="batchTier" onclick="selectTier('batch')">
                                 <div
                                     style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
-                                    <input type="radio" name="modelTier" value="llm" checked
+                                    <input type="radio" name="modelTier" value="batch" checked
                                         style="margin-right: 0.5rem;">
-                                    <span class="tier-name">LLM (정밀 분석)</span>
+                                    <span class="tier-name">배치용 (정밀 분석)</span>
                                 </div>
                                 <div class="tier-model">Qwen3-4B (권장)</div>
                             </div>
-                            <div class="tier-option" id="slmTier" onclick="selectTier('slm')">
+                            <div class="tier-option" id="realtimeTier" onclick="selectTier('realtime')">
                                 <div
                                     style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
-                                    <input type="radio" name="modelTier" value="slm" style="margin-right: 0.5rem;">
-                                    <span class="tier-name">LLM (실시간 처리)</span>
+                                    <input type="radio" name="modelTier" value="realtime" style="margin-right: 0.5rem;">
+                                    <span class="tier-name">실시간용 (빠른 요약)</span>
                                 </div>
                                 <div class="tier-model">Qwen3-1.7B (빠름)</div>
                             </div>
@@ -864,19 +864,19 @@
                     <div class="form-group">
                         <label>비교할 모델 티어</label>
                         <div class="analysis-mode-selector">
-                            <div class="mode-option active" id="compareLLMMode" onclick="selectComparisonTier('llm')">
+                            <div class="mode-option active" id="compareBatchMode" onclick="selectComparisonTier('batch')">
                                 <div
                                     style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
-                                    <input type="radio" name="comparisonTier" value="llm" checked
+                                    <input type="radio" name="comparisonTier" value="batch" checked
                                         style="margin-right: 0.5rem;">
-                                    <span class="tier-name">LLM 모델 비교</span>
+                                    <span class="tier-name">배치용 모델 비교</span>
                                 </div>
                                 <div class="tier-model">정밀 분석 모델들 (요약+카테고리+제목)</div>
                             </div>
-                            <div class="mode-option" id="compareSLMMode" onclick="selectComparisonTier('slm')">
+                            <div class="mode-option" id="compareRealtimeMode" onclick="selectComparisonTier('realtime')">
                                 <div
                                     style="display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
-                                    <input type="radio" name="comparisonTier" value="slm" style="margin-right: 0.5rem;">
+                                    <input type="radio" name="comparisonTier" value="realtime" style="margin-right: 0.5rem;">
                                     <span class="tier-name">실시간 모델 비교</span>
                                 </div>
                                 <div class="tier-model">실시간 처리 모델들 (요약만)</div>
@@ -884,35 +884,25 @@
                         </div>
                     </div>
 
-                    <!-- LLM 모델 비교 옵션 -->
-                    <div id="llmCompareOptions">
+                    <!-- 배치 모델 비교 옵션 -->
+                    <div id="batchCompareOptions">
                         <div class="form-group">
-                            <label>비교할 LLM 모델 선택 (정밀 분석용)</label>
+                            <label>비교할 배치용 모델 선택 (정밀 분석용)</label>
                             <div class="model-compare-options">
                                 <label class="model-checkbox">
                                     <input type="checkbox" id="compareQwen3_4b" value="qwen3_4b" checked>
                                     <span>Qwen3-4B</span>
                                     <small>메인 모델 (검증된 안정성)</small>
                                 </label>
-                                <label class="model-checkbox">
-                                    <input type="checkbox" id="compareAX_4b" value="ax_light">
-                                    <span>A.X-4.0-Light</span>
-                                    <small>SKT 효율성 중심</small>
-                                </label>
-                                <label class="model-checkbox">
-                                    <input type="checkbox" id="compareMidm_base" value="midm_base">
-                                    <span>Midm-2.0-Base</span>
-                                    <small>호환성 중심</small>
-                                </label>
                             </div>
                             <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
-                                📊 LLM 비교: 요약 품질, 카테고리 정확도, 제목 생성 능력을 종합 비교합니다.
+                                📊 배치 비교: 요약 품질, 카테고리 정확도, 제목 생성 능력을 종합 비교합니다.
                             </p>
                         </div>
                     </div>
 
-                    <!-- SLM 모델 비교 옵션 -->
-                    <div id="slmCompareOptions" style="display: none;">
+                    <!-- 실시간 모델 비교 옵션 -->
+                    <div id="realtimeCompareOptions" style="display: none;">
                         <div class="form-group">
                             <label>비교할 실시간 모델 선택 (실시간 처리용)</label>
                             <div class="model-compare-options">
@@ -920,11 +910,6 @@
                                     <input type="checkbox" id="compareQwen3_1_7b" value="qwen3_1_7b" checked>
                                     <span>Qwen3-1.7B</span>
                                     <small>실시간 처리 (권장)</small>
-                                </label>
-                                <label class="model-checkbox">
-                                    <input type="checkbox" id="compareMidm_mini" value="midm_mini">
-                                    <span>Midm-2.0-Mini</span>
-                                    <small>초고속 처리</small>
                                 </label>
                             </div>
                             <p style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">
@@ -934,23 +919,19 @@
                     </div>
                 </div>
 
-                <!-- SLM 모델 선택 -->
-                <div class="form-group model-selection" id="slmModelSelection" style="display: none;">
-                    <label>실시간 모델 선택</label>
-                    <select id="slmModelSelect">
+                <!-- 실시간 모델 선택 -->
+                <div class="form-group model-selection" id="realtimeModelSelection" style="display: none;">
+                    <label>실시간용 모델 선택</label>
+                    <select id="realtimeModelSelect">
                         <option value="qwen3">Qwen3-1.7B (권장)</option>
-                        <option value="midm">Midm-2.0-Mini</option>
-                        <option value="both">모든 테스트</option>
                     </select>
                 </div>
 
-                <!-- LLM 모델 선택 -->
-                <div class="form-group model-selection" id="llmModelSelection">
-                    <label>LLM 모델 선택</label>
-                    <select id="llmModelSelect">
+                <!-- 배치 모델 선택 -->
+                <div class="form-group model-selection" id="batchModelSelection">
+                    <label>배치용 모델 선택</label>
+                    <select id="batchModelSelect">
                         <option value="qwen3_4b">Qwen3-4B-Instruct-2507 (권장)</option>
-                        <option value="midm_base">Midm-2.0-Base-Instruct</option>
-                        <option value="ax_light">A.X-4.0-Light</option>
                     </select>
                 </div>
 
@@ -1077,7 +1058,7 @@
     </div>
 
     <script>
-        let selectedTier = 'llm';
+        let selectedTier = 'batch';
         let selectedAnalysisMode = 'single';
 
         // 페이지 로드 시 초기화
@@ -1112,15 +1093,15 @@
                 document.getElementById('compareAnalysisOptions').style.display = 'block';
                 document.getElementById('singleAnalysisButtons').style.display = 'none';
                 document.getElementById('compareAnalysisButtons').style.display = 'block';
-                // LLM 모델 선택 UI 숨김 (모델 성능 비교 모드에서는 불필요)
-                document.getElementById('llmModelSelection').style.display = 'none';
+                // 배치 모델 선택 UI 숨김 (모델 성능 비교 모드에서는 불필요)
+                document.getElementById('batchModelSelection').style.display = 'none';
                 // 결과 카드는 비교 시작 시 표시
             }
 
             console.log('분석 모드 변경:', mode);
         }
 
-        // 비교 티어 선택 (LLM vs SLM)
+        // 비교 티어 선택 (Batch vs Realtime)
         function selectComparisonTier(tier) {
             // 라디오 버튼 업데이트
             document.querySelectorAll('input[name="comparisonTier"]').forEach(radio => {
@@ -1131,15 +1112,16 @@
             document.querySelectorAll('#compareAnalysisOptions .mode-option').forEach(el => {
                 el.classList.remove('active');
             });
-            document.getElementById('compare' + tier.toUpperCase() + 'Mode').classList.add('active');
+            const tierLabel = tier === 'batch' ? 'Batch' : 'Realtime';
+            document.getElementById('compare' + tierLabel + 'Mode').classList.add('active');
 
             // 모델 선택 옵션 표시/숨김
-            if (tier === 'llm') {
-                document.getElementById('llmCompareOptions').style.display = 'block';
-                document.getElementById('slmCompareOptions').style.display = 'none';
+            if (tier === 'batch') {
+                document.getElementById('batchCompareOptions').style.display = 'block';
+                document.getElementById('realtimeCompareOptions').style.display = 'none';
             } else {
-                document.getElementById('llmCompareOptions').style.display = 'none';
-                document.getElementById('slmCompareOptions').style.display = 'block';
+                document.getElementById('batchCompareOptions').style.display = 'none';
+                document.getElementById('realtimeCompareOptions').style.display = 'block';
             }
 
             console.log('비교 티어 변경:', tier);
@@ -1156,8 +1138,8 @@
             if (selectedRadio) {
                 selectedTier = selectedRadio.value;
 
-                if (selectedTier === 'slm') {
-                    // SLM 모드: 카테고리와 제목 체크박스 비활성화
+                if (selectedTier === 'realtime') {
+                    // 실시간 모드: 카테고리와 제목 체크박스 비활성화
                     document.getElementById('includeCategory').checked = false;
                     document.getElementById('includeCategory').disabled = true;
                     document.getElementById('includeTitle').checked = false;
@@ -1166,25 +1148,25 @@
                     // 요약은 항상 체크되어 있어야 함
                     document.getElementById('includeSummary').checked = true;
 
-                    // SLM 모델 선택 표시
-                    document.getElementById('slmModelSelection').style.display = 'block';
-                    document.getElementById('llmModelSelection').style.display = 'none';
+                    // 실시간 모델 선택 표시
+                    document.getElementById('realtimeModelSelection').style.display = 'block';
+                    document.getElementById('batchModelSelection').style.display = 'none';
 
                     // 분석 버튼 텍스트 변경
                     const analyzeBtn = document.getElementById('analyzeBtn');
                     analyzeBtn.innerHTML = '실시간 분석';
                 } else {
-                    // LLM 모드: 모든 체크박스 활성화
+                    // 배치 모드: 모든 체크박스 활성화
                     document.getElementById('includeCategory').disabled = false;
                     document.getElementById('includeTitle').disabled = false;
 
-                    // SLM 모델 선택 숨김
-                    document.getElementById('slmModelSelection').style.display = 'none';
-                    document.getElementById('llmModelSelection').style.display = 'block';
+                    // 실시간 모델 선택 숨김
+                    document.getElementById('realtimeModelSelection').style.display = 'none';
+                    document.getElementById('batchModelSelection').style.display = 'block';
 
                     // 분석 버튼 텍스트 변경
                     const analyzeBtn = document.getElementById('analyzeBtn');
-                    analyzeBtn.innerHTML = 'LLM 분석 시작';
+                    analyzeBtn.innerHTML = '배치 분석 시작';
                 }
             }
         }
@@ -1399,6 +1381,13 @@
                         'Cache-Control': 'no-cache'
                     }
                 });
+
+                if (response.status === 403) {
+                    showMessage('DEBUG 모드에서만 테스트 데이터를 사용할 수 있습니다.', 'error');
+                    button.innerHTML = originalHtml;
+                    button.disabled = false;
+                    return;
+                }
 
                 // 응답 상태 확인
                 if (!response.ok) {
@@ -1706,7 +1695,7 @@
                 // 6. 버튼 상태 복원
                 if (analyzeBtn) {
                     analyzeBtn.disabled = false;
-                    analyzeBtn.textContent = 'LLM 분석 시작';
+                    analyzeBtn.textContent = '배치 분석 시작';
                 }
 
                 // 자동 복구 타임아웃 해제
@@ -1742,7 +1731,7 @@
 
             // 선택된 티어 확인 (기본값 설정)
             const selectedRadio = document.querySelector('input[name="modelTier"]:checked');
-            const modelTier = selectedRadio ? selectedRadio.value : 'llm';
+            const modelTier = selectedRadio ? selectedRadio.value : 'batch';
 
             // 분석 버튼 비활성화 (중복 클릭 방지)
             const analyzeBtn = document.getElementById('analyzeBtn');
@@ -1750,10 +1739,10 @@
             analyzeBtn.disabled = true;
 
             // 선택된 티어 기반 버튼 텍스트 변경
-            if (modelTier === 'slm') {
+            if (modelTier === 'realtime') {
                 analyzeBtn.textContent = '실시간 분석 중';
             } else {
-                analyzeBtn.textContent = 'LLM 분석 중';
+                analyzeBtn.textContent = '배치 분석 중';
             }
 
             // 1단계: 모델 로딩 상태 확인 및 표시
@@ -1774,7 +1763,7 @@
                         segments: null,
                         utterances: null
                     },
-                    ai_tier: modelTier,  // 'slm' or 'llm'
+                    ai_tier: modelTier,  // 'realtime' or 'batch'
                     consultation_category_name: null,
                     consultation_category_code: null,
                     existing_title: null,
@@ -1788,44 +1777,36 @@
 
                 // 모델 티어별 옵션 설정
                 let selectedModelName = '';
-                if (modelTier === 'slm') {
-                    // SLM에서 요약만 수행
-                    const slmModel = document.getElementById('slmModelSelect').value;
-                    requestData.slm_model = slmModel;
+                if (modelTier === 'realtime') {
+                    // 실시간용은 요약만 수행
+                    const realtimeModel = document.getElementById('realtimeModelSelect').value;
+                    requestData.realtime_model = realtimeModel;
                     requestData.options.include_category_recommendation = false;
                     requestData.options.include_title_generation = false;
 
-                    // SLM 모델명 설정
-                    if (slmModel === 'qwen3') {
+                    // 실시간 모델명 설정
+                    if (realtimeModel === 'qwen3') {
                         selectedModelName = 'Qwen3-1.7B (Realtime)';
-                    } else if (slmModel === 'midm') {
-                        selectedModelName = 'Midm-2.0-Mini (Realtime)';
-                    } else if (slmModel === 'both') {
-                        selectedModelName = 'Qwen3-1.7B + Midm-2.0-Mini (Realtime)';
                     }
                 } else {
-                    // LLM 기능들
-                    const llmModel = document.getElementById('llmModelSelect').value;
-                    requestData.llm_model = llmModel;
+                    // 배치용 기능들
+                    const batchModel = document.getElementById('batchModelSelect').value;
+                    requestData.batch_model = batchModel;
                     requestData.options.include_summary = document.getElementById('includeSummary').checked;
                     requestData.options.include_category_recommendation = document.getElementById('includeCategory').checked;
                     requestData.options.include_title_generation = document.getElementById('includeTitle').checked;
 
-                    // LLM 모델명 설정
-                    if (llmModel === 'qwen3_4b') {
-                        selectedModelName = 'Qwen3-4B-Instruct-2507 (LLM)';
-                    } else if (llmModel === 'midm_base') {
-                        selectedModelName = 'Midm-2.0-Base-Instruct (LLM)';
-                    } else if (llmModel === 'ax_light') {
-                        selectedModelName = 'A.X-4.0-Light (LLM)';
+                    // 배치 모델명 설정
+                    if (batchModel === 'qwen3_4b') {
+                        selectedModelName = 'Qwen3-4B-Instruct-2507 (Batch)';
                     }
                 }
 
                 console.log(`🚀 [AI 분석 시작] 선택된 모델: ${selectedModelName}`);
                 console.log('📋 [요청 데이터]', requestData);
 
-                // 타임아웃 설정 (LLM 분석은 최대 60초)
-                const timeoutDuration = modelTier === 'slm' ? 15000 : 60000; // SLM: 15초, LLM: 60초
+                // 타임아웃 설정 (배치 분석은 최대 60초)
+                const timeoutDuration = modelTier === 'realtime' ? 15000 : 60000; // Realtime: 15초, Batch: 60초
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
@@ -1921,10 +1902,10 @@
                 analyzeBtn.disabled = false;
 
                 // 버튼 텍스트 복원
-                if (modelTier === 'slm') {
+                if (modelTier === 'realtime') {
                     analyzeBtn.textContent = '실시간 분석';
                 } else {
-                    analyzeBtn.textContent = 'LLM 분석 시작';
+                    analyzeBtn.textContent = '배치 분석 시작';
                 }
             }
         }
@@ -2062,11 +2043,11 @@
             }
 
             // 선택된 비교 티어 확인
-            const selectedComparisonTier = document.querySelector('input[name="comparisonTier"]:checked')?.value || 'llm';
+            const selectedComparisonTier = document.querySelector('input[name="comparisonTier"]:checked')?.value || 'batch';
 
             // 선택된 티어의 모델들만 확인
             const selectedModels = [];
-            const selectorBase = selectedComparisonTier === 'llm' ? '#llmCompareOptions' : '#slmCompareOptions';
+            const selectorBase = selectedComparisonTier === 'batch' ? '#batchCompareOptions' : '#realtimeCompareOptions';
 
             document.querySelectorAll(`${selectorBase} input[type="checkbox"]:checked`).forEach(checkbox => {
                 selectedModels.push({
@@ -2097,7 +2078,7 @@
             document.getElementById('comparisonResults').style.display = 'none';
 
             // 비교 진행 상태 표시 (티어별 메시지)
-            const tierMessage = selectedComparisonTier === 'llm'
+            const tierMessage = selectedComparisonTier === 'batch'
                 ? '정밀 분석 모델들을 비교하고 있습니다 (요약+카테고리+제목)'
                 : '실시간 처리 모델들을 비교하고 있습니다 (요약만)';
 
@@ -2138,8 +2119,8 @@
                 displayComparisonResults(comparisonResults);
 
                 // 티어별 완료 메시지
-                const completionMessage = selectedComparisonTier === 'llm'
-                    ? `${selectedModels.length}개 LLM 모델 정밀 분석 비교가 완료되었습니다!`
+                const completionMessage = selectedComparisonTier === 'batch'
+                    ? `${selectedModels.length}개 배치용 모델 정밀 분석 비교가 완료되었습니다!`
                     : `${selectedModels.length}개 실시간 모델 실시간 처리 비교가 완료되었습니다!`;
 
                 showMessage(completionMessage, 'success');
@@ -2176,21 +2157,21 @@
                     ai_tier: model.tier,
                     options: {
                         include_summary: true,
-                        include_category_recommendation: model.tier === 'llm',  // SLM은 요약만
-                        include_title_generation: model.tier === 'llm',         // SLM은 요약만
-                        max_summary_length: model.tier === 'slm' ? 200 : 300   // SLM은 더 짧게
+                        include_category_recommendation: model.tier === 'batch',  // 실시간용은 요약만
+                        include_title_generation: model.tier === 'batch',         // 실시간용은 요약만
+                        max_summary_length: model.tier === 'realtime' ? 200 : 300   // 실시간용은 더 짧게
                     }
                 };
 
                 // 티어별 모델 설정
-                if (model.tier === 'slm') {
-                    requestData.slm_model = model.id === 'qwen3_1_7b' ? 'qwen3' : 'midm';
+                if (model.tier === 'realtime') {
+                    requestData.realtime_model = 'qwen3';
                 } else {
-                    requestData.llm_model = model.id;
+                    requestData.batch_model = model.id;
                 }
 
                 // 타임아웃 설정
-                const timeoutDuration = model.tier === 'slm' ? 15000 : 60000;
+                const timeoutDuration = model.tier === 'realtime' ? 15000 : 60000;
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
@@ -2247,8 +2228,8 @@
             document.getElementById('comparisonResults').style.display = 'block';
 
             // 비교 티어 확인
-            const comparisonTier = results.length > 0 ? results[0].model.tier : 'llm';
-            const isLLM = comparisonTier === 'llm';
+            const comparisonTier = results.length > 0 ? results[0].model.tier : 'batch';
+            const isBatch = comparisonTier === 'batch';
 
             // 테이블 헤더 동적 생성
             const comparisonTable = document.querySelector('.comparison-table');
@@ -2257,8 +2238,8 @@
             // 테이블 클래스 업데이트
             comparisonTable.className = `comparison-table ${comparisonTier}-table`;
 
-            if (isLLM) {
-                // LLM: 모든 컬럼 표시
+            if (isBatch) {
+                // 배치용: 모든 컬럼 표시
                 tableHead.innerHTML = `
                     <th style="width: 15%;">모델</th>
                     <th style="width: 12%;">처리시간</th>
@@ -2268,7 +2249,7 @@
                     <th style="width: 5%;">상태</th>
                 `;
             } else {
-                // SLM: 카테고리/제목 제외
+                // 실시간용: 카테고리/제목 제외
                 tableHead.innerHTML = `
                     <th style="width: 18%;">모델</th>
                     <th style="width: 15%;">처리시간</th>
@@ -2308,8 +2289,8 @@
                     : '없음';
 
                 // 티어별 다른 테이블 행 생성
-                if (isLLM) {
-                    // LLM: 모든 컬럼 표시
+                if (isBatch) {
+                    // 배치용: 모든 컬럼 표시
                     row.innerHTML = `
                         <td><strong>${result.model.name}</strong><br><small>${result.model_used}</small></td>
                         <td><span class="performance-badge ${timeClass}">${result.processing_time.toFixed(2)}초</span></td>
@@ -2319,7 +2300,7 @@
                         <td>${result.success ? '✅ 성공' : '❌ ' + (result.error || '실패')}</td>
                     `;
                 } else {
-                    // SLM: 카테고리/제목 제외
+                    // 실시간용: 카테고리/제목 제외
                     row.innerHTML = `
                         <td><strong>${result.model.name}</strong><br><small>${result.model_used}</small></td>
                         <td><span class="performance-badge ${timeClass}">${result.processing_time.toFixed(2)}초</span></td>
@@ -2442,6 +2423,11 @@
 
                 clearTimeout(timeoutId);
 
+                if (response.status === 403) {
+                    status.textContent = 'DEBUG 모드에서만 로컬 파일을 볼 수 있습니다.';
+                    return;
+                }
+
                 // HTTP 상태 코드 체크
                 if (!response.ok) {
                     throw new Error(`디렉토리 로드 실패 (${response.status}: ${response.statusText})`);
@@ -2510,6 +2496,11 @@
 
                 const response = await fetch(`/api/v1/consultation/local-files/${date}`);
 
+                if (response.status === 403) {
+                    fileItems.innerHTML = '<div style="text-align: center; padding: 1rem; color: #d32f2f;">DEBUG 모드에서만 로컬 파일을 볼 수 있습니다.</div>';
+                    return;
+                }
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
@@ -2574,6 +2565,13 @@
                 });
 
                 clearTimeout(timeoutId);
+
+                if (response.status === 403) {
+                    showMessage('DEBUG 모드에서만 로컬 파일을 로드할 수 있습니다.', 'error');
+                    loadBtn.textContent = '로드';
+                    loadBtn.disabled = false;
+                    return;
+                }
 
                 // HTTP 상태 코드 체크
                 if (!response.ok) {

@@ -9,8 +9,10 @@ Provides complete consultation analysis workflow by integrating verified compone
 """
 
 import json
+import hashlib
 import time
 import logging
+from threading import Lock
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timezone
 
@@ -29,6 +31,16 @@ from ..schemas.consultation import (
 from ..core.ai_analyzer import AIAnalyzer
 from ..core.quality_validator import quality_validator
 from ..core.cache_manager import cache_analysis_result, get_cached_analysis_result
+from ..core.file_processor import extract_conversation_text
+from ..core.model_registry import (
+    REALTIME_TIER,
+    BATCH_TIER,
+    DEFAULT_REALTIME_MODEL,
+    DEFAULT_BATCH_MODEL,
+    normalize_tier,
+    build_model_identifier,
+    get_model_display_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +61,7 @@ class ConsultationService:
         self.failed_count = 0
         self.total_processing_time = 0.0
         self.initialization_time = None
+        self._stats_lock = Lock()
 
     def initialize(self) -> bool:
         """Service initialization - AI analyzer model load"""
@@ -71,6 +84,33 @@ class ConsultationService:
             logger.error(f"[ConsultationService] Initialization error: {e}")
             return False
 
+    def analyze_consultation_text(
+        self,
+        conversation_text: str,
+        analysis_options: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Analyze consultation text without request model (batch worker helper)."""
+        if not conversation_text or len(conversation_text.strip()) < 10:
+            return {
+                "success": False,
+                "error": "Insufficient conversation content for analysis"
+            }
+
+        if not self.is_initialized:
+            self.initialize()
+
+        options = {
+            "model_tier": BATCH_TIER,
+            "batch_model": DEFAULT_BATCH_MODEL,
+            "include_summary": True,
+            "include_category_recommendation": True,
+            "include_title_generation": True,
+        }
+        if analysis_options:
+            options.update(analysis_options)
+
+        return self.ai_analyzer.analyze(conversation_text, options)
+
     def analyze_consultation(
         self,
         request: ConsultationAnalysisRequest
@@ -78,7 +118,8 @@ class ConsultationService:
         """Single consultation analysis - Main entry point"""
 
         start_time = time.time()
-        self.processed_count += 1
+        with self._stats_lock:
+            self.processed_count += 1
 
         try:
             # 1. Extract conversation text from STT data
@@ -91,21 +132,27 @@ class ConsultationService:
             logger.info(f"[ConsultationService] Starting AI analysis for consultation (length: {len(conversation_text)} chars)")
 
             # Prepare analysis options from user request
+            model_tier = normalize_tier(request.ai_tier)
             analysis_options = {
-                "model_tier": request.ai_tier,
+                "model_tier": model_tier,
                 "include_summary": request.options.include_summary,
                 "include_category_recommendation": request.options.include_category_recommendation,
-                "include_title_generation": request.options.include_title_generation
+                "include_title_generation": request.options.include_title_generation,
             }
 
             # Add specific model selection based on tier
-            if request.ai_tier == "slm" and request.slm_model:
-                analysis_options["slm_model"] = request.slm_model
-            elif request.ai_tier == "llm" and request.llm_model:
-                analysis_options["llm_model"] = request.llm_model
+            if model_tier == REALTIME_TIER and request.realtime_model:
+                analysis_options["realtime_model"] = request.realtime_model
+            elif model_tier == BATCH_TIER and request.batch_model:
+                analysis_options["batch_model"] = request.batch_model
 
             logger.info(f"[ConsultationService] Analysis options: {analysis_options}")
-            logger.info(f"[ConsultationService] Conversation text: {conversation_text[:200]}...")
+            conversation_hash = hashlib.md5(conversation_text.encode("utf-8")).hexdigest()[:10]
+            logger.info(
+                "[ConsultationService] Conversation payload - length: %s, hash: %s",
+                len(conversation_text),
+                conversation_hash
+            )
             
             # 안전한 캐싱 시스템 (실패 시 자동 fallback)
             cache_used = False
@@ -113,17 +160,19 @@ class ConsultationService:
             
             try:
                 # 캐시 키 생성 (모델별 구분 보장)
-                import hashlib
-                import json
-                
                 # 모델 정보 명시적 추출
-                model_tier = analysis_options.get("model_tier", "llm")
-                if model_tier == "slm":
-                    model_name = analysis_options.get("slm_model", "qwen3")
-                    model_identifier = f"slm_{model_name}"
+                model_tier = normalize_tier(analysis_options.get("model_tier", BATCH_TIER))
+                if model_tier == REALTIME_TIER:
+                    model_key = (
+                        analysis_options.get("realtime_model")
+                        or DEFAULT_REALTIME_MODEL
+                    )
                 else:
-                    model_name = analysis_options.get("llm_model", "qwen3_4b") 
-                    model_identifier = f"llm_{model_name}"
+                    model_key = (
+                        analysis_options.get("batch_model")
+                        or DEFAULT_BATCH_MODEL
+                    )
+                model_identifier = build_model_identifier(model_tier, model_key)
                 
                 cache_key_data = {
                     "text_hash": hashlib.md5(conversation_text.encode('utf-8')).hexdigest()[:16],
@@ -210,6 +259,8 @@ class ConsultationService:
                 # AI 분석 시간은 그대로 표시
                 actual_processing_time = round(raw_processing_time, 2)
                 logger.info(f"[ConsultationService] AI 분석 완료 - 처리시간: {actual_processing_time:.2f}초")
+
+            with self._stats_lock:
                 self.total_processing_time += actual_processing_time
 
             # Get actual model used from AI results
@@ -227,7 +278,8 @@ class ConsultationService:
             )
 
             # 6. Success tracking
-            self.success_count += 1
+            with self._stats_lock:
+                self.success_count += 1
 
             logger.info(f"[ConsultationService] Analysis completed successfully in {actual_processing_time:.3f}s")
 
@@ -240,9 +292,11 @@ class ConsultationService:
             )
 
         except Exception as e:
-            self.failed_count += 1
+            with self._stats_lock:
+                self.failed_count += 1
             processing_time = time.time() - start_time
-            self.total_processing_time += processing_time
+            with self._stats_lock:
+                self.total_processing_time += processing_time
 
             logger.error(f"[ConsultationService] Analysis failed: {e}")
 
@@ -289,11 +343,12 @@ class ConsultationService:
         results = []
         successful_analyses = 0
         failed_analyses = 0
+        consultations = request.consultation_requests
 
-        logger.info(f"[ConsultationService] Starting batch analysis for {len(request.consultations)} consultations")
+        logger.info(f"[ConsultationService] Starting batch analysis for {len(consultations)} consultations")
 
-        for i, consultation_request in enumerate(request.consultations):
-            logger.info(f"[ConsultationService] Processing consultation {i+1}/{len(request.consultations)}")
+        for i, consultation_request in enumerate(consultations):
+            logger.info(f"[ConsultationService] Processing consultation {i+1}/{len(consultations)}")
 
             try:
                 result = self.analyze_consultation(consultation_request)
@@ -326,53 +381,37 @@ class ConsultationService:
 
         logger.info(f"[ConsultationService] Batch analysis completed: {successful_analyses} successful, {failed_analyses} failed in {total_processing_time:.2f}s")
 
+        batch_id = None
+        if request.batch_options:
+            batch_id = request.batch_options.get("batch_id")
+
         return BatchAnalysisResponse(
-            success=True,
+            batch_id=batch_id,
+            total_count=len(consultations),
+            success_count=successful_analyses,
+            failed_count=failed_analyses,
             results=results,
-            summary={
-                "total_processed": len(request.consultations),
-                "successful_analyses": successful_analyses,
-                "failed_analyses": failed_analyses,
-                "success_rate": successful_analyses / len(request.consultations) if request.consultations else 0.0,
-                "total_processing_time_seconds": total_processing_time,
-                "average_processing_time_seconds": total_processing_time / len(request.consultations) if request.consultations else 0.0
-            }
+            total_processing_time=total_processing_time
         )
 
     def _process_stt_data(self, stt_data: STTData) -> str:
         """call_data content STT data processing (superfast optimization)"""
+        try:
+            payload = stt_data.model_dump()
+            if payload.get("raw_data") and "raw_call_data" not in payload:
+                payload["raw_call_data"] = payload["raw_data"]
+            conversation_text = extract_conversation_text(payload)
+        except Exception as e:
+            logger.warning(f"[ConsultationService] Failed to process STT data: {e}")
+            conversation_text = None
 
-        # 1. Primary: use conversation_text if available (pre-processed)
-        if hasattr(stt_data, 'conversation_text') and stt_data.conversation_text:
-            conversation_text = stt_data.conversation_text.strip()
-            if len(conversation_text) > 10:
-                logger.debug(f"[ConsultationService] Using pre-processed conversation_text ({len(conversation_text)} chars)")
-                return conversation_text
+        if conversation_text:
+            logger.debug(
+                "[ConsultationService] Extracted conversation_text (%s chars)",
+                len(conversation_text)
+            )
+            return conversation_text
 
-        # 2. Fallback: process raw_call_data.details (CenterLink format)
-        if hasattr(stt_data, 'raw_call_data') and stt_data.raw_call_data:
-            try:
-                if isinstance(stt_data.raw_call_data, dict) and 'details' in stt_data.raw_call_data:
-                    details = stt_data.raw_call_data['details']
-
-                    if isinstance(details, list) and details:
-                        # Extract text from CenterLink STT format
-                        conversation_parts = []
-                        for detail in details:
-                            if isinstance(detail, dict) and 'text' in detail:
-                                text = detail['text'].strip()
-                                if text:
-                                    conversation_parts.append(text)
-
-                        if conversation_parts:
-                            conversation_text = ' '.join(conversation_parts)
-                            logger.debug(f"[ConsultationService] Extracted from raw_call_data.details ({len(conversation_text)} chars)")
-                            return conversation_text
-
-            except Exception as e:
-                logger.warning(f"[ConsultationService] Failed to process raw_call_data: {e}")
-
-        # 3. Final fallback: empty or insufficient data
         logger.warning("[ConsultationService] No usable conversation text found in STT data")
         return ""
 
@@ -495,7 +534,7 @@ class ConsultationService:
     def _calculate_category_accuracy(self, ai_results: Dict[str, Any]) -> Optional[float]:
         """Category extraction accuracy (Korean basis) - optimized"""
 
-        categories = ai_results.get('categories', [])
+        categories = ai_results.get('recommended_categories', [])
         if not categories:
             return None
 
@@ -504,7 +543,7 @@ class ConsultationService:
         meaningful_categories = 0
 
         for category in categories[:3]:  # Check first 3 categories
-            keyword = category.get('keyword', '').strip()
+            keyword = category.get('name', '').strip()
 
             if keyword and len(keyword) >= 2:  # At least 2 characters
                 if not any(generic in keyword for generic in generic_terms):
@@ -515,27 +554,33 @@ class ConsultationService:
     def _calculate_title_relevance(self, ai_results: Dict[str, Any]) -> Optional[float]:
         """Title generation (Korean basis) - optimized"""
 
-        titles = ai_results.get('titles', [])
+        titles = ai_results.get('generated_titles', [])
         if not titles:
             return None
 
         valid_titles = 0
         for title in titles:
-            if isinstance(title, str) and title.strip():
-                clean_title = title.strip()
+            if isinstance(title, dict):
+                clean_title = str(title.get("title", "")).strip()
+            else:
+                clean_title = str(title).strip()
 
                 # Check for meaningful title (not error messages)
-                if len(clean_title) >= 5 and '실패했습니다' not in clean_title:
-                    valid_titles += 1
+            if len(clean_title) >= 5 and '실패했습니다' not in clean_title:
+                valid_titles += 1
 
         return valid_titles / len(titles) if titles else 0.0
 
     def get_status(self) -> Dict[str, Any]:
         """Service status information"""
+        with self._stats_lock:
+            processed_count = self.processed_count
+            success_count = self.success_count
+            failed_count = self.failed_count
+            total_processing_time = self.total_processing_time
 
         avg_processing_time = (
-            self.total_processing_time / self.processed_count
-            if self.processed_count > 0 else 0.0
+            total_processing_time / processed_count if processed_count > 0 else 0.0
         )
 
         ai_status = self.ai_analyzer.get_status() if self.ai_analyzer else {}
@@ -544,10 +589,10 @@ class ConsultationService:
             "service_initialized": self.is_initialized,
             "initialization_time": self.initialization_time,
             "statistics": {
-                "processed_consultations": self.processed_count,
-                "successful_analyses": self.success_count,
-                "failed_analyses": self.failed_count,
-                "success_rate": self.success_count / self.processed_count if self.processed_count > 0 else 0.0,
+                "processed_consultations": processed_count,
+                "successful_analyses": success_count,
+                "failed_analyses": failed_count,
+                "success_rate": success_count / processed_count if processed_count > 0 else 0.0,
                 "average_processing_time": avg_processing_time
             },
             "ai_analyzer_status": ai_status
@@ -557,28 +602,14 @@ class ConsultationService:
         """Get user-friendly model display name based on request and results"""
         try:
             # Get model tier and specific model from request
-            model_tier = request.ai_tier or "llm"
+            model_tier = normalize_tier(request.ai_tier or BATCH_TIER)
 
-            if model_tier == "slm":
-                slm_model = request.slm_model or "qwen3"
-                if slm_model == "qwen3":
-                    return "Qwen3-1.7B (Realtime)"
-                elif slm_model == "midm":
-                    return "Midm-2.0-Mini (Realtime)"
-                elif slm_model == "both":
-                    return "Qwen3-1.7B + Midm-2.0-Mini (Realtime)"
-                else:
-                    return f"{slm_model.upper()} (Realtime)"
-            else:  # LLM
-                llm_model = request.llm_model or "qwen3_4b"
-                if llm_model == "qwen3_4b":
-                    return "Qwen3-4B-Instruct-2507 (Batch)"
-                elif llm_model == "midm_base":
-                    return "Midm-2.0-Base-Instruct (Batch)"
-                elif llm_model == "ax_light":
-                    return "A.X-4.0-Light (Batch)"
-                else:
-                    return f"{llm_model.upper()} (Batch)"
+            if model_tier == REALTIME_TIER:
+                model_key = request.realtime_model or DEFAULT_REALTIME_MODEL
+            else:
+                model_key = request.batch_model or DEFAULT_BATCH_MODEL
+
+            return get_model_display_name(model_tier, model_key)
 
         except Exception as e:
             logger.warning(f"[ConsultationService] Failed to get model display name: {e}")
@@ -593,8 +624,7 @@ class ConsultationService:
         """Cleanup service resources."""
         try:
             if self.ai_analyzer:
-                if hasattr(self.ai_analyzer.qwen_summarizer, 'cleanup'):
-                    self.ai_analyzer.qwen_summarizer.cleanup()
+                self.ai_analyzer.cleanup()
 
             logger.info("[ConsultationService] Cleanup completed")
 
@@ -632,7 +662,7 @@ class ConsultationService:
             gc.collect()
             
             # 상태 변수 초기화
-            self.model_loaded = False
+            self.is_initialized = False
             self.processed_count = 0
             self.success_count = 0
             self.failed_count = 0

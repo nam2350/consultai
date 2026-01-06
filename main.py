@@ -83,10 +83,15 @@ async def ensure_utf8_encoding(request, call_next):
     return response
 
 # CORS 미들웨어 추가
+allow_credentials = True
+if "*" in settings.ALLOWED_ORIGINS:
+    allow_credentials = False
+    logger.warning("CORS 설정에 '*'가 포함되어 credentials를 비활성화했습니다.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -103,13 +108,13 @@ except Exception as e:
 # 라우터 등록
 app.include_router(health.router, prefix="/api/v1")
 
-# 상담 분석 라우터 등록 (LLM 배치 처리)
+# 상담 분석 라우터 등록 (배치 처리)
 app.include_router(consultation_router, prefix="/api/v1")
 
-# 실시간 상담 분석 라우터 등록 (SLM 실시간 처리 - 외부 시스템 연동용)
+# 실시간 상담 분석 라우터 등록 (실시간 처리 - 외부 시스템 연동용)
 app.include_router(realtime_router, prefix="/api/v1")
 
-# 비동기 배치 처리 라우터 등록 (LLM 배치 처리 - 외부 시스템 연동용)
+# 비동기 배치 처리 라우터 등록 (배치 처리 - 외부 시스템 연동용)
 app.include_router(batch_router, prefix="/api/v1")
 
 # 개발 전용 라우터 등록 (인증 없음 - DEBUG 모드에서만)
@@ -125,17 +130,17 @@ async def root():
         # 시스템 상태
         "health": "/api/v1/health",
 
-        # 실시간 처리 (SLM - 외부 시스템 연동용)
+        # 실시간 처리 (외부 시스템 연동용)
         "realtime_analyze": "/api/v1/consultation/realtime-analyze",
         "realtime_status": "/api/v1/consultation/realtime-status",
 
-        # 비동기 배치 처리 (LLM - 외부 시스템 연동용)
+        # 비동기 배치 처리 (외부 시스템 연동용)
         "batch_analyze_async": "/api/v1/consultation/batch-analyze-async",
         "batch_status": "/api/v1/consultation/batch-status/{batch_id}",
         "batch_cancel": "/api/v1/consultation/batch-cancel/{batch_id}",
         "batch_queue_stats": "/api/v1/consultation/batch-queue-stats",
 
-        # 기존 동기 배치 처리 (LLM)
+        # 기존 동기 배치 처리
         "consultation_analyze": "/api/v1/consultation/analyze",
         "consultation_batch": "/api/v1/consultation/batch-analyze",
         "consultation_status": "/api/v1/consultation/status",

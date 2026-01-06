@@ -16,18 +16,19 @@ def normalize_stt_json(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     
     try:
         # call_data 형식만 지원 (성능 극대화)
-        details = data.get('raw_call_data', {}).get('details', [])
+        raw_payload = data.get('raw_call_data') or data.get('raw_data') or {}
+        details = raw_payload.get('details', [])
         if details:
             # 직접 매핑으로 최고 속도 달성
             segments = [
                 {
                     'speaker': detail['senderType'],
-                    'text': detail['message'].strip(),
+                    'text': (detail.get('message') or detail.get('text') or '').strip(),
                     'start': 0.0,
                     'end': 0.0
                 }
                 for detail in details
-                if detail.get('senderType') and detail.get('message', '').strip()
+                if detail.get('senderType') and (detail.get('message') or detail.get('text') or '').strip()
             ]
         
     except Exception as e:
@@ -253,7 +254,7 @@ def extract_conversation_text(stt_data: Dict[str, Any]) -> Optional[str]:
             return conversation_text.strip()
 
         # 2. raw_call_data.details에서 파싱 (call_data 형식)
-        raw_call_data = stt_data.get('raw_call_data', {})
+        raw_call_data = stt_data.get('raw_call_data') or stt_data.get('raw_data') or {}
         details = raw_call_data.get('details', [])
         if details:
             segments = normalize_stt_json({'raw_call_data': raw_call_data})

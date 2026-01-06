@@ -182,7 +182,7 @@ def normalize_summary(
     logger: Optional[logging.Logger] = None,
     fallback_text: Optional[str] = None,
 ) -> str:
-    """Normalize a raw LLM response into the standard three-line summary format."""
+    """Normalize a raw model response into the standard three-line summary format."""
     if not raw_summary or not raw_summary.strip():
         raise RuntimeError("Generated summary is empty or too short")
 

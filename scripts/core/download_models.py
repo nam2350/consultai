@@ -1,88 +1,34 @@
-"""Unified model download utility for SLM/LLM tiers.
+"""Unified model download utility for realtime/batch tiers.
 
-This consolidates the previous download_model.py, download_slm_models.py,
-and download_mlm_models.py scripts. It supports downloading any combination
-of real-time SLM models or batch MLM models while working completely offline
-after the artefacts are cached locally.
+This consolidates the previous download_model.py, download_realtime_models.py,
+and download_batch_models.py scripts. It supports downloading any combination
+of realtime models or batch models while working completely offline after the
+artefacts are cached locally.
 """
 
 from __future__ import annotations
 
 import argparse
 import io
-import os
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import List
 
 import torch
 from huggingface_hub import snapshot_download
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.core.model_registry import MODEL_KEY_ALIASES, MODEL_SPECS, ModelSpec
 
 # Normalise stdout/stderr to UTF-8 for Windows terminals.
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
-
-
-@dataclass(frozen=True)
-class ModelSpec:
-    key: str
-    name: str
-    repo_id: str
-    tier: str  # "slm", "mlm", or "core"
-    description: str
-    ignore_patterns: Iterable[str] | None = None
-
-    @property
-    def local_dir(self) -> Path:
-        return MODELS_ROOT / self.name
-
-
-PROJECT_ROOT = Path(__file__).parent.parent
 MODELS_ROOT = PROJECT_ROOT / "models"
-
-
-MODEL_REGISTRY: List[ModelSpec] = [
-    # Core / batch models
-    ModelSpec(
-        key="qwen3-4b",
-        name="Qwen3-4B",
-        repo_id="Qwen/Qwen3-4B-Instruct-2507",
-        tier="core",
-        description="주요 배치 summarizer (Qwen3-4B-Instruct-2507)",
-    ),
-    ModelSpec(
-        key="ax-4b",
-        name="A.X-4.0-Light",
-        repo_id="skt/A.X-4.0-Light",
-        tier="mlm",
-        description="SKT 경량 4B 모델",
-    ),
-    ModelSpec(
-        key="midm-2.0-base",
-        name="Midm-2.0-Base",
-        repo_id="K-intelligence/Midm-2.0-Base-Instruct",
-        tier="mlm",
-        description="Midm 중급 베이스",
-    ),
-    # Real-time SLM models
-    ModelSpec(
-        key="qwen3-1.7b",
-        name="Qwen3-1.7B",
-        repo_id="Qwen/Qwen3-1.7B",
-        tier="slm",
-        description="실시간 상담 보조용 SLM",
-    ),
-    ModelSpec(
-        key="midm-2.0-mini",
-        name="Midm-2.0-Mini",
-        repo_id="K-intelligence/Midm-2.0-Mini-Instruct",
-        tier="slm",
-        description="초저지연 Midm SLM",
-    ),
-]
+MODEL_REGISTRY: List[ModelSpec] = list(MODEL_SPECS.values())
 
 
 def list_models(tier: str | None = None) -> None:
@@ -91,9 +37,9 @@ def list_models(tier: str | None = None) -> None:
     for spec in MODEL_REGISTRY:
         if tier and spec.tier != tier:
             continue
-        print(f"[{spec.tier.upper()}] {spec.key:15s} -> {spec.name} ({spec.repo_id})")
+        print(f"[{spec.tier.upper()}] {spec.key:15s} -> {spec.display_name} ({spec.repo_id})")
         print(f"   설명: {spec.description}")
-        print(f"   경로: {spec.local_dir}")
+        print(f"   경로: {spec.local_dir(MODELS_ROOT)}")
     print("=" * 60)
 
 
@@ -102,9 +48,9 @@ def ensure_models_root() -> None:
 
 
 def download_model(spec: ModelSpec, force: bool) -> bool:
-    destination = spec.local_dir
+    destination = spec.local_dir(MODELS_ROOT)
     print("=" * 60)
-    print(f"{spec.name} 모델 다운로드")
+    print(f"{spec.display_name} 모델 다운로드")
     print("=" * 60)
     print(f"Repo ID   : {spec.repo_id}")
     print(f"설치 경로 : {destination}")
@@ -154,30 +100,36 @@ def download_model(spec: ModelSpec, force: bool) -> bool:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="통합 모델 다운로드 스크립트")
+    parser = argparse.ArgumentParser(description="Unified model download utility")
     parser.add_argument(
         "--models",
         nargs="+",
         default=["all"],
-        help="다운로드할 모델 키 (예: qwen3-4b midm-2.0-mini). 기본값 all",
+        help="Model keys to download (e.g. qwen3 qwen3_4b). Default: all",
     )
     parser.add_argument(
         "--tier",
-        choices=["slm", "mlm", "core", "all"],
         default="all",
-        help="특정 티어만 선택해서 다운로드",
+        help="Model tier filter: realtime, batch, or all (default: all)",
     )
     parser.add_argument(
         "--force",
         action="store_true",
-        help="기존 파일이 있어도 재다운로드",
+        help="Overwrite existing downloads if present.",
     )
     parser.add_argument(
         "--list",
         action="store_true",
-        help="모델 목록만 출력하고 종료",
+        help="List available models and exit.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    tier_aliases = {"mlm": "batch", "core": "batch"}
+    raw_tier = (args.tier or "all").strip().lower()
+    args.tier = tier_aliases.get(raw_tier, raw_tier)
+    if args.tier not in {"realtime", "batch", "all"}:
+        parser.error("Invalid --tier value. Use: realtime, batch, or all.")
+    return args
 
 
 def filter_models(args: argparse.Namespace) -> List[ModelSpec]:
@@ -192,7 +144,8 @@ def filter_models(args: argparse.Namespace) -> List[ModelSpec]:
     else:
         selected = []
         for key in args.models:
-            match = next((spec for spec in MODEL_REGISTRY if spec.key == key), None)
+            normalized_key = MODEL_KEY_ALIASES.get(key.strip().lower(), key.strip().lower())
+            match = next((spec for spec in MODEL_REGISTRY if spec.key == normalized_key), None)
             if not match:
                 print(f"[WARNING] 알 수 없는 모델 키: {key}")
                 continue
@@ -231,7 +184,7 @@ def main() -> int:
     print(f"총 {len(targets)}개 모델 다운로드를 시작합니다.")
     success_count = 0
     for index, spec in enumerate(targets, 1):
-        print(f"\n[{index}/{len(targets)}] {spec.name}")
+        print(f"\n[{index}/{len(targets)}] {spec.display_name}")
         if download_model(spec, args.force):
             success_count += 1
 
@@ -243,4 +196,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

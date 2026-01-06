@@ -1,6 +1,6 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Optional
-from pydantic import Field, validator
+from pydantic import Field, AliasChoices, field_validator
 import os
 
 class ApplicationSettings(BaseSettings):
@@ -31,7 +31,7 @@ class ApplicationSettings(BaseSettings):
     ENABLE_ADMIN_UI: bool = Field(default=True, description="관리자 UI 활성화 여부")
     
     # 보안 설정 - 프로덕션에서는 반드시 환경변수 사용
-    SECRET_KEY: str = Field(default="dev-secret-key-for-testing-only-32chars", env="SECRET_KEY", min_length=32, description="JWT 시크릿 키")
+    SECRET_KEY: str = Field(default="dev-secret-key-for-testing-only-32chars", min_length=32, description="JWT 시크릿 키")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, ge=1, description="액세스 토큰 만료 시간(분)")
     
     # AI 모델 설정 (이중 모델 시스템)
@@ -39,19 +39,62 @@ class ApplicationSettings(BaseSettings):
     MAX_INPUT_LENGTH: int = Field(default=2048, ge=1, description="최대 입력 길이 (최적화: 4096->2048)")
     MAX_SUMMARY_LENGTH: int = Field(default=600, ge=1, description="최대 요약 길이 (상세 분석을 위해 확장: 256->600)")
     
-    # LLM (실시간) 처리 설정
-    SLM_MODEL_TYPE: str = Field(default="qwen3", description="실시간 LLM 모델 타입 (qwen3)")
-    SLM_MODEL_PATH_QWEN3: str = Field(default=r"models\Qwen3-1.7B", description="Qwen3-1.7B 모델 경로")
+    # Realtime processing settings
+    REALTIME_MODEL_TYPE: str = Field(
+        default="qwen3",
+        description="실시간용 모델 타입 (qwen3)",
+    )
+    REALTIME_MODEL_PATH_QWEN3: str = Field(
+        default=r"models\Qwen3-1.7B",
+        description="Qwen3-1.7B 모델 경로",
+    )
+    REALTIME_TARGET_RESPONSE_TIME: float = Field(
+        default=3.0,
+        description="실시간 목표 응답시간(초)",
+    )
+    REALTIME_MAX_INPUT_LENGTH: int = Field(
+        default=12000,
+        description="실시간 최대 입력 길이",
+    )
 
-    SLM_TARGET_RESPONSE_TIME: float = Field(default=3.0, description="실시간 LLM 목표 응답시간(초)")
-    SLM_MAX_INPUT_LENGTH: int = Field(default=12000, description="실시간 LLM 최대 입력 길이")
-    
-    # LLM (배치) 처리 설정 (멀티 모델)
+    # Batch processing settings (multi-model)
     BATCH_INTERVAL_MINUTES: int = Field(default=15, description="배치 처리 간격(분)")
     BATCH_PRIMARY_MODEL: str = Field(default="qwen3_4b", description="우선 배치 모델")
-    
-    # 배치 모델 경로들
-    MLM_MODEL_PATH_QWEN3_4B: str = Field(default=r"models\Qwen3-4B", description="Qwen3-4B 모델 경로 (기존)")
+    BATCH_QUEUE_DB_PATH: str = Field(
+        default="logs/batch_queue.db",
+        description="배치 큐 상태 저장 DB 경로",
+    )
+    BATCH_QUEUE_MAX_RETAINED: int = Field(
+        default=1000,
+        ge=1,
+        description="배치 큐에 보관할 최대 작업 수",
+    )
+    BATCH_PROCESSING_TIMEOUT_SECONDS: int = Field(
+        default=3600,
+        ge=60,
+        description="배치 처리 중단 감지 타임아웃(초)",
+    )
+    BATCH_PROCESSING_MAX_ATTEMPTS: int = Field(
+        default=3,
+        ge=1,
+        description="배치 처리 재시도 허용 횟수",
+    )
+    BATCH_STALE_RECOVERY_INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=5,
+        description="배치 중단 복구 주기(초)",
+    )
+
+    # Batch model path
+    BATCH_MODEL_PATH_QWEN3_4B: str = Field(
+        default=r"models\Qwen3-4B",
+        description="Qwen3-4B batch model path",
+        validation_alias=AliasChoices("BATCH_MODEL_PATH_QWEN3_4B", "MLM_MODEL_PATH_QWEN3_4B"),
+    )
+
+    @property
+    def MLM_MODEL_PATH_QWEN3_4B(self) -> str:  # Legacy alias
+        return self.BATCH_MODEL_PATH_QWEN3_4B
     
     # 모델 선택 전략
     ENABLE_DYNAMIC_MODEL_SELECTION: bool = Field(default=True, description="동적 모델 선택 활성화")
@@ -80,8 +123,45 @@ class ApplicationSettings(BaseSettings):
     # 환경 설정
     NODE_ENV: str = Field(default="development", description="실행 환경")
     HF_TOKEN: Optional[str] = Field(default=None, description="HuggingFace 토큰")
+    BATCH_CALLBACK_ALLOWED_HOSTS: str = Field(
+        default="",
+        description="배치 콜백 허용 호스트 목록(쉼표 구분, 예: api.example.com,.example.org)",
+    )
+    BATCH_CALLBACK_BLOCK_PRIVATE_IPS: bool = Field(
+        default=True,
+        description="배치 콜백에서 사설/로컬 IP 접근 차단 여부",
+    )
+    BATCH_CALLBACK_TIMEOUT_SECONDS: int = Field(
+        default=30,
+        ge=1,
+        description="배치 콜백 타임아웃(초)",
+        validation_alias=AliasChoices("BATCH_CALLBACK_TIMEOUT_SECONDS", "CALLBACK_TIMEOUT"),
+    )
+    BATCH_CALLBACK_RETRY_COUNT: int = Field(
+        default=3,
+        ge=0,
+        description="배치 콜백 재시도 횟수",
+        validation_alias=AliasChoices("BATCH_CALLBACK_RETRY_COUNT", "CALLBACK_RETRY_COUNT"),
+    )
+    BATCH_CALLBACK_RETRY_INTERVAL_SECONDS: int = Field(
+        default=5,
+        ge=0,
+        description="배치 콜백 재시도 간격(초)",
+        validation_alias=AliasChoices(
+            "BATCH_CALLBACK_RETRY_INTERVAL_SECONDS",
+            "CALLBACK_RETRY_INTERVAL",
+        ),
+    )
 
-    @validator('SECRET_KEY')
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+        validate_assignment=True,
+    )
+
+    @field_validator('SECRET_KEY')
     def validate_secret_key_security(cls, v):
         """
         시크릿 키 보안 유효성 검사
@@ -93,7 +173,7 @@ class ApplicationSettings(BaseSettings):
             raise ValueError("프로덕션에서는 개발용 시크릿 키를 사용하지 마세요")
         return v
 
-    @validator('LOG_LEVEL')
+    @field_validator('LOG_LEVEL')
     def validate_log_level_format(cls, v):
         """
         로그 레벨 형식 유효성 검사
@@ -105,7 +185,7 @@ class ApplicationSettings(BaseSettings):
             raise ValueError(f"유효하지 않은 로그 레벨: {v}. 사용 가능한 값: {valid_levels}")
         return v.upper()
 
-    @validator('ALLOWED_ORIGINS')
+    @field_validator('ALLOWED_ORIGINS')
     def validate_cors_origins_configuration(cls, v):
         """
         CORS 오리진 설정 유효성 검사
@@ -125,18 +205,12 @@ class ApplicationSettings(BaseSettings):
         required_directories = [
             os.path.dirname(self.LOG_FILE),
             self.UPLOAD_DIR,
-            self.MODEL_PATH
+            self.MODEL_PATH,
+            os.path.dirname(self.BATCH_QUEUE_DB_PATH),
         ]
         for directory_path in required_directories:
             if directory_path:
                 os.makedirs(directory_path, exist_ok=True)
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        extra = "ignore"
-        validate_assignment = True
 
 # 싱글톤 패턴을 위한 전역 설정 인스턴스
 _application_settings_instance = None

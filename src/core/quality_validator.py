@@ -1,5 +1,5 @@
 """
-LLM 요약 품질 검증 유틸리티
+Batch 요약 품질 검증 유틸리티
 요약 포맷, 길이, 의미 밀도, 허위 정보 등을 검사해 점수화합니다.
 """
 
@@ -24,7 +24,7 @@ class QualityValidator:
     """요약 결과에 대한 정량·정성 검증을 수행합니다."""
 
     def __init__(self) -> None:
-        # LLM 기본 기준 (엄격)
+        # Batch 기본 기준 (엄격)
         self.min_length = 30
         self.max_length = 1000
         self.accept_threshold = 0.70
@@ -32,11 +32,11 @@ class QualityValidator:
         self.semantic_unique_ratio = 0.40
         self.semantic_repeat_threshold = 0.50
 
-        # 실시간 LLM 완화 기준 (경량 모델용)
-        self.slm_accept_threshold = 0.40
-        self.slm_semantic_min_tokens = 10
-        self.slm_semantic_unique_ratio = 0.25
-        self.slm_semantic_repeat_threshold = 0.70
+        # 실시간 Batch 완화 기준 (경량 모델용)
+        self.realtime_accept_threshold = 0.40
+        self.realtime_semantic_min_tokens = 10
+        self.realtime_semantic_unique_ratio = 0.25
+        self.realtime_semantic_repeat_threshold = 0.70
 
         self.stopwords = set(DEFAULT_STOPWORDS)
 
@@ -170,15 +170,15 @@ class QualityValidator:
             logger.error(f"[QualityValidator] Analysis quality validation error: {e}")
             return 0.0
 
-    def validate_summary_slm(self,
+    def validate_summary_realtime(self,
                             summary: str,
                             original_text: Optional[str] = None) -> Dict[str, Any]:
-        """실시간 LLM 전용 요약 검증 (완화된 기준 적용)"""
+        """실시간 Batch 전용 요약 검증 (완화된 기준 적용)"""
         format_check = self.check_format(summary)
         length_check = self.check_length(summary)
 
         warnings = list(self.check_warnings(original_text, summary) if original_text else [])
-        semantic_check = self.check_semantic_density_slm(summary)
+        semantic_check = self.check_semantic_density_realtime(summary)
         for warning in semantic_check['warnings']:
             if warning and warning not in warnings:
                 warnings.append(warning)
@@ -193,7 +193,7 @@ class QualityValidator:
         if semantic_check['is_valid']:
             quality_score += 0.25
         else:
-            quality_score -= 0.10  # SLM은 페널티 완화
+            quality_score -= 0.10  # Realtime은 페널티 완화
         if not warnings:
             quality_score += 0.10
         if semantic_check['raw_speaker']:
@@ -201,7 +201,7 @@ class QualityValidator:
 
         quality_score = max(0.0, min(1.0, quality_score))
         warnings = list(dict.fromkeys(warnings))
-        is_acceptable = quality_score >= self.slm_accept_threshold
+        is_acceptable = quality_score >= self.realtime_accept_threshold
 
         return {
             'format_check': format_check,
@@ -212,8 +212,8 @@ class QualityValidator:
             'is_acceptable': is_acceptable
         }
 
-    def check_semantic_density_slm(self, summary: str) -> Dict[str, Any]:
-        """실시간 LLM용 의미 밀도 검사 (완화된 기준)"""
+    def check_semantic_density_realtime(self, summary: str) -> Dict[str, Any]:
+        """실시간 Batch용 의미 밀도 검사 (완화된 기준)"""
         result = {
             'is_valid': False,
             'token_count': 0,
@@ -252,19 +252,19 @@ class QualityValidator:
         )
         result['raw_speaker'] = raw_speaker
 
-        if token_count < self.slm_semantic_min_tokens:
+        if token_count < self.realtime_semantic_min_tokens:
             result['warnings'].append('요약 본문 분량이 부족합니다')
-        if unique_ratio < self.slm_semantic_unique_ratio:
+        if unique_ratio < self.realtime_semantic_unique_ratio:
             result['warnings'].append('어휘 다양성이 낮습니다')
-        if repetition_ratio > self.slm_semantic_repeat_threshold:
+        if repetition_ratio > self.realtime_semantic_repeat_threshold:
             result['warnings'].append('특정 단어가 과도하게 반복됩니다')
         if raw_speaker:
             result['warnings'].append('요약에 원문 대화 표현(고객:/상담사:)이 포함되어 있습니다')
 
         result['is_valid'] = (
-            token_count >= self.slm_semantic_min_tokens and
-            unique_ratio >= self.slm_semantic_unique_ratio and
-            repetition_ratio <= self.slm_semantic_repeat_threshold and
+            token_count >= self.realtime_semantic_min_tokens and
+            unique_ratio >= self.realtime_semantic_unique_ratio and
+            repetition_ratio <= self.realtime_semantic_repeat_threshold and
             not raw_speaker
         )
         return result
@@ -366,7 +366,7 @@ def generate_validation_report(self,
     results = validation_data['validation_results']
 
     lines = [
-        '# LLM 요약 품질 검증 리포트',
+        '# Batch 요약 품질 검증 리포트',
         '',
         '## 기본 정보',
         f"- **모델명**: {model_name}",

@@ -86,6 +86,12 @@ class Qwen2507Summarizer:
                     model_dtype = torch.float16
             else:
                 model_dtype = torch.float32
+
+            max_memory = None
+            if self.device == "cuda":
+                max_memory_gb = os.getenv("GPU_MAX_MEMORY_GB")
+                if max_memory_gb:
+                    max_memory = {0: f"{max_memory_gb}GB"}
             
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
@@ -94,7 +100,7 @@ class Qwen2507Summarizer:
                 local_files_only=True,
                 low_cpu_mem_usage=False,
                 device_map="auto" if self.device == "cuda" else None,
-                max_memory={0: "14GB"} if self.device == "cuda" else None
+                max_memory=max_memory
             )
 
             # 안정성을 위해 모델이 올바른 디바이스에 로드되었는지 확인
@@ -150,7 +156,7 @@ class Qwen2507Summarizer:
             return False
     
     def build_chat_prompt(self, conversation_text: str) -> str:
-        """LLM 최적화된 시스템 프롬프트 (WhisperX_web 기반 개선)"""
+        """Batch model optimized system prompt (WhisperX_web based)."""
         system_prompt = (
             "당신은 콜센터 상담 대화를 요약하는 전문 AI입니다.\\n\\n"
             "입력 대화 분석:\\n"
@@ -370,7 +376,7 @@ class Qwen2507Summarizer:
     
     def summarize_consultation(self, conversation_text: str, max_length: int = 300) -> Dict[str, Any]:
         """
-        상담 대화를 LLM이 직접 요약합니다.
+        상담 대화를 배치 모델이 직접 요약합니다.
         
         Args:
             conversation_text: 요약할 상담 대화
@@ -403,7 +409,7 @@ class Qwen2507Summarizer:
                 if not self.load_model():
                     raise RuntimeError("Qwen3-4B-2507 모델 로드 실패")
 
-            # 실제 LLM으로 요약 생성
+            # 실제 배치 모델로 요약 생성
             try:
                 long_threshold = int(os.getenv('LONG_TEXT_THRESHOLD_CHARS', '12000'))
             except Exception:

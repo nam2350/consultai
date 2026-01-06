@@ -38,6 +38,7 @@ router = APIRouter(prefix="/consultation", tags=["상담 분석"])
 # 전역 서비스 인스턴스 (싱글톤 패턴)
 _consultation_service: ConsultationService = None
 _service_start_time = None
+_analysis_semaphore = asyncio.Semaphore(max(1, settings.WORKER_PROCESSES))
 
 async def get_consultation_service() -> ConsultationService:
     """상담 서비스 인스턴스 반환 (지연 초기화)"""
@@ -55,7 +56,7 @@ async def get_consultation_service() -> ConsultationService:
         
         # 동기 초기화 (AsyncIO 제거)
         logger.info(f"[API] 초기화 전 상태: is_initialized={_consultation_service.is_initialized}")
-        success = _consultation_service.initialize()
+        success = await asyncio.to_thread(_consultation_service.initialize)
         logger.info(f"[API] 초기화 결과: success={success}, is_initialized={_consultation_service.is_initialized}")
         
         if not success:
@@ -96,7 +97,8 @@ async def analyze_consultation(
         service = await get_consultation_service()
         
         # 분석 실행 (동기 호출)
-        result = service.analyze_consultation(request)
+        async with _analysis_semaphore:
+            result = await asyncio.to_thread(service.analyze_consultation, request)
         
         # 성공/실패에 따른 로그
         if result.success:
@@ -119,7 +121,7 @@ async def analyze_consultation(
         return ConsultationAnalysisResponse(
             consultation_id=request.consultation_id,
             success=False,
-            error=f"API 처리 오류: {str(e) or type(e).__name__} - {error_details[:200]}",
+            error=f"API 처리 오류: {str(e) or type(e).__name__}",
             error_code="API_ERROR"
         )
 
@@ -161,7 +163,8 @@ async def batch_analyze_consultations(
         service = await get_consultation_service()
         
         # 배치 분석 실행 (동기 호출)
-        result = service.batch_analyze(request)
+        async with _analysis_semaphore:
+            result = await asyncio.to_thread(service.batch_analyze, request)
         
         logger.info(f"[API] 배치 분석 완료 - {result.success_count}/{result.total_count} 성공")
         return result
@@ -218,6 +221,12 @@ async def get_system_status():
                 "ai_analyzer_status": {
                     "model_loaded": False,
                     "model_name": "N/A"
+                },
+                "legacy_input_counts": {
+                    "model_tier": 0,
+                    "realtime_model": 0,
+                    "batch_model": 0,
+                    "model_key_alias": 0
                 }
             })
 
@@ -250,7 +259,10 @@ async def get_system_status():
         enhanced_response.update({
             "service_initialized": service_status.get("service_initialized", False),
             "statistics": service_status.get("statistics", {}),
-            "ai_analyzer_status": service_status.get("ai_analyzer_status", {})
+            "ai_analyzer_status": service_status.get("ai_analyzer_status", {}),
+            "legacy_input_counts": (
+                service_status.get("ai_analyzer_status", {}).get("legacy_input_counts", {})
+            )
         })
 
         return enhanced_response
@@ -279,6 +291,12 @@ async def get_system_status():
             "ai_analyzer_status": {
                 "model_loaded": False,
                 "model_name": "Unknown"
+            },
+            "legacy_input_counts": {
+                "model_tier": 0,
+                "realtime_model": 0,
+                "batch_model": 0,
+                "model_key_alias": 0
             }
         })
 
@@ -341,7 +359,7 @@ async def initialize_service(background_tasks: BackgroundTasks):
         
         # 기존 서비스 정리
         if _consultation_service:
-            await _consultation_service.cleanup()
+            _consultation_service.cleanup()
             _consultation_service = None
         
         # 백그라운드에서 새로운 서비스 초기화
@@ -439,7 +457,8 @@ async def external_analyze(
         
         # 2. 내부 분석 서비스 호출 (동기 호출)
         service = await get_consultation_service()
-        result = service.analyze_consultation(consultation_request)
+        async with _analysis_semaphore:
+            result = await asyncio.to_thread(service.analyze_consultation, consultation_request)
         
         # 3. 결과를 외부 시스템 형식으로 변환
         external_response = _convert_to_external_response(result, request)
@@ -550,6 +569,12 @@ async def list_local_files():
     from pathlib import Path
     
     try:
+        if not settings.DEBUG:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="이 엔드포인트는 DEBUG 모드에서만 사용 가능합니다"
+            )
+
         call_data_path = Path("call_data")
         
         if not call_data_path.exists():
@@ -592,6 +617,12 @@ async def list_files_by_date(date: str):
     from pathlib import Path
 
     try:
+        if not settings.DEBUG:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="이 엔드포인트는 DEBUG 모드에서만 사용 가능합니다"
+            )
+
         # 날짜 형식 검증 (YYYY-MM-DD)
         if not re.match(r'^\d{4}-\d{2}-\d{2}$', date):
             return {
@@ -673,6 +704,12 @@ async def get_local_file(date: str, filename: str):
     from pathlib import Path
     
     try:
+        if not settings.DEBUG:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="이 엔드포인트는 DEBUG 모드에서만 사용 가능합니다"
+            )
+
         # 엄격한 경로 검증 함수
         def validate_file_path(date_str: str, filename_str: str) -> Path:
             """안전한 파일 경로 검증 및 생성"""
@@ -777,6 +814,12 @@ async def get_test_data():
     """실제 통화 데이터를 랜덤으로 반환 - 고성능 버전"""
     import os, json, random
     
+    if not settings.DEBUG:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 엔드포인트는 DEBUG 모드에서만 사용 가능합니다"
+        )
+
     # 직접 경로 구성 (최적화)
     call_data_dir = os.path.join("call_data", "2025-07-15")
     
@@ -811,6 +854,6 @@ async def cleanup_consultation_service():
     
     if _consultation_service:
         logger.info("[API] 상담 서비스 정리 시작")
-        await _consultation_service.cleanup()
+        _consultation_service.cleanup()
         _consultation_service = None
         logger.info("[API] 상담 서비스 정리 완료")

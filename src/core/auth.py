@@ -24,8 +24,13 @@ class BoundKeyValidator:
         """환경변수에서 유효한 바운드 키 목록 로드"""
         # 환경변수에서 쉼표로 구분된 키 목록 읽기
         keys_str = os.getenv("BOUND_KEYS", "")
+        node_env = os.getenv("NODE_ENV", "").lower()
 
         if not keys_str:
+            if node_env == "production":
+                logger.error("[인증] 프로덕션 환경에서 BOUND_KEYS가 설정되지 않았습니다.")
+                raise RuntimeError("BOUND_KEYS must be set in production")
+
             # 기본 테스트 키 (개발 환경용)
             logger.warning("[인증] BOUND_KEYS 환경변수가 설정되지 않았습니다. 기본 테스트 키를 사용합니다.")
             self.valid_keys = {
