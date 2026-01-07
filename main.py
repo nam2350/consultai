@@ -117,11 +117,13 @@ app.include_router(realtime_router, prefix="/api/v1")
 # 비동기 배치 처리 라우터 등록 (배치 처리 - 외부 시스템 연동용)
 app.include_router(batch_router, prefix="/api/v1")
 
-# 개발 전용 라우터 등록 (인증 없음 - DEBUG 모드에서만)
-if settings.DEBUG:
+# 개발 전용 라우터 등록 (인증 없음 - ALLOW_DEV_ROUTES가 명시적으로 true일 때만)
+# 주의: DEBUG=true만으로는 활성화되지 않음. ALLOW_DEV_ROUTES=true 필요
+if settings.ALLOW_DEV_ROUTES:
     from src.api.routes.dev import router as dev_router
     app.include_router(dev_router, prefix="/api/v1")
-    logger.warning("⚠️ [개발 모드] 인증 없는 개발 전용 API가 활성화되었습니다 (/api/v1/dev/*)")
+    logger.warning("⚠️ [보안 경고] 인증 없는 개발 전용 API가 활성화되었습니다 (/api/v1/dev/*)")
+    logger.warning("⚠️ [보안 경고] 프로덕션 환경에서는 ALLOW_DEV_ROUTES=false로 설정하세요!")
 
 @app.get("/")
 async def root():
@@ -149,8 +151,8 @@ async def root():
         "external_analyze": "/api/v1/consultation/external/analyze"
     }
 
-    # DEBUG 모드일 때만 개발 전용 엔드포인트 추가
-    if settings.DEBUG:
+    # ALLOW_DEV_ROUTES가 활성화되었을 때만 개발 전용 엔드포인트 추가
+    if settings.ALLOW_DEV_ROUTES:
         endpoints["dev_realtime_no_auth"] = "/api/v1/dev/realtime-analyze-no-auth (개발 전용)"
         endpoints["dev_status"] = "/api/v1/dev/status (개발 전용)"
         endpoints["dev_test"] = "/api/v1/dev/test (개발 전용)"
@@ -160,6 +162,7 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "debug_mode": settings.DEBUG,
+        "dev_routes_enabled": settings.ALLOW_DEV_ROUTES,
         "docs_url": "/docs",
         "api_endpoints": endpoints
     }

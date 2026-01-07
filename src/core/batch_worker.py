@@ -72,19 +72,22 @@ class BatchWorker:
 
         logger.info("[배치워커] 배치 워커 초기화 완료")
 
-    async def load_batch_service(self, model_name: str = "qwen3_4b"):
+    async def load_batch_service(self, model_name: str = "qwen3_4b") -> bool:
         """
-        ?? 서비스 로드 (지연 초기화)
+        배치 분석 서비스 로드 (지연 초기화)
 
         Args:
             model_name: 모델 이름 (qwen3_4b)
+
+        Returns:
+            True if service loaded successfully, False otherwise
         """
         if self.batch_service is not None:
             # 이미 로드된 경우 정리
             if hasattr(self.batch_service, 'cleanup'):
                 await asyncio.to_thread(self.batch_service.cleanup)
 
-        logger.info(f"[배치워커] ?? 서비스 로드 시작: {model_name}")
+        logger.info(f"[배치워커] 배치 분석 서비스 로드 시작: {model_name}")
 
         try:
             if model_name == "qwen3_4b":
@@ -98,14 +101,14 @@ class BatchWorker:
                 return False
 
             if success:
-                logger.info(f"[배치워커] ?? 서비스 로드 완료: {model_name}")
+                logger.info(f"[배치워커] 배치 분석 서비스 로드 완료: {model_name}")
                 return True
             else:
-                logger.error(f"[배치워커] ?? 서비스 로드 실패: {model_name}")
+                logger.error(f"[배치워커] 배치 분석 서비스 로드 실패: {model_name}")
                 return False
 
         except Exception as e:
-            logger.error(f"[배치워커] ?? 서비스 로드 오류: {e}", exc_info=True)
+            logger.error(f"[배치워커] 배치 분석 서비스 로드 오류: {e}", exc_info=True)
             return False
 
     async def process_consultation(
@@ -139,7 +142,7 @@ class BatchWorker:
                     "processing_time": time.time() - start_time
                 }
 
-            # 2. ??으로 분석
+            # 2. 배치 모델로 분석
             if model_name == "qwen3_4b":
                 # ConsultationService 사용 (요약+키워드+제목)
                 result = await asyncio.to_thread(
@@ -291,13 +294,13 @@ class BatchWorker:
         batch_start_time = time.time()
 
         try:
-            # 1. ?? 서비스 로드
+            # 1. 배치 분석 서비스 로드
             success = await self.load_batch_service(job.batch_model)
             if not success:
                 await self.queue.update_job_status(
                     batch_id,
                     BatchStatus.FAILED,
-                    error="?? 서비스 로드 실패"
+                    error="배치 분석 서비스 로드 실패"
                 )
                 return
 
@@ -348,7 +351,7 @@ class BatchWorker:
             )
 
         finally:
-            # ?? 서비스 정리
+            # 배치 분석 서비스 정리
             if self.batch_service and hasattr(self.batch_service, 'cleanup'):
                 await asyncio.to_thread(self.batch_service.cleanup)
                 self.batch_service = None

@@ -74,7 +74,15 @@ class AIAnalyzer:
         }
     
     def _load_batch_model(self, model_name: str) -> bool:
-        """Load batch model (lazy loading)"""
+        """
+        Load batch model (lazy loading)
+
+        Args:
+            model_name: Name of the batch model to load (e.g., 'qwen3_4b')
+
+        Returns:
+            True if model loaded successfully, False otherwise
+        """
         try:
             # If the same model is already loaded, skip
             if self.current_batch_model == model_name and self.batch_model_loaded:
@@ -245,6 +253,7 @@ class AIAnalyzer:
             }
 
     def _warn_legacy_options(self, options: Dict[str, Any]) -> None:
+        """Log warnings for deprecated option values."""
         raw_tier = str(options.get("model_tier", "")).strip().lower()
         if raw_tier and raw_tier not in {REALTIME_TIER, BATCH_TIER}:
             self.legacy_input_counts["model_tier"] += 1
@@ -355,8 +364,8 @@ class AIAnalyzer:
             # Memory cleanup on failure
             try:
                 self.reset_for_next_analysis()
-            except:
-                pass
+            except (RuntimeError, MemoryError) as cleanup_error:
+                logger.warning(f"[AIAnalyzer] cleanup failed during error recovery: {cleanup_error}")
             raise
     
     def _generate_batch_summary(self, conversation_text: str) -> Dict[str, Any]:

@@ -73,8 +73,26 @@ class QualityValidator:
             return {'is_valid': False, 'length': length, 'warning': '길이가 너무 깁니다'}
         return {'is_valid': True, 'length': length, 'warning': None}
 
-    def check_semantic_density(self, summary: str) -> Dict[str, Any]:
-        result = {
+    def _check_semantic_density_internal(
+        self,
+        summary: str,
+        min_tokens: int,
+        unique_ratio_threshold: float,
+        repeat_threshold: float
+    ) -> Dict[str, Any]:
+        """
+        의미 밀도 검사 공통 로직
+
+        Args:
+            summary: 검사할 요약 텍스트
+            min_tokens: 최소 토큰 수 기준
+            unique_ratio_threshold: 최소 고유 비율 기준
+            repeat_threshold: 최대 반복 비율 기준
+
+        Returns:
+            검사 결과 딕셔너리
+        """
+        result: Dict[str, Any] = {
             'is_valid': False,
             'token_count': 0,
             'unique_ratio': 0.0,
@@ -112,22 +130,31 @@ class QualityValidator:
         )
         result['raw_speaker'] = raw_speaker
 
-        if token_count < self.semantic_min_tokens:
+        if token_count < min_tokens:
             result['warnings'].append('요약 본문 분량이 부족합니다')
-        if unique_ratio < self.semantic_unique_ratio:
+        if unique_ratio < unique_ratio_threshold:
             result['warnings'].append('어휘 다양성이 낮습니다')
-        if repetition_ratio > self.semantic_repeat_threshold:
+        if repetition_ratio > repeat_threshold:
             result['warnings'].append('특정 단어가 과도하게 반복됩니다')
         if raw_speaker:
             result['warnings'].append('요약에 원문 대화 표현(고객:/상담사:)이 포함되어 있습니다')
 
         result['is_valid'] = (
-            token_count >= self.semantic_min_tokens and
-            unique_ratio >= self.semantic_unique_ratio and
-            repetition_ratio <= self.semantic_repeat_threshold and
+            token_count >= min_tokens and
+            unique_ratio >= unique_ratio_threshold and
+            repetition_ratio <= repeat_threshold and
             not raw_speaker
         )
         return result
+
+    def check_semantic_density(self, summary: str) -> Dict[str, Any]:
+        """배치 모드용 의미 밀도 검사 (엄격한 기준)"""
+        return self._check_semantic_density_internal(
+            summary,
+            self.semantic_min_tokens,
+            self.semantic_unique_ratio,
+            self.semantic_repeat_threshold
+        )
 
     @lru_cache(maxsize=50)
     def check_warnings(self, original_text: Optional[str], summary: str) -> List[str]:
@@ -170,15 +197,32 @@ class QualityValidator:
             logger.error(f"[QualityValidator] Analysis quality validation error: {e}")
             return 0.0
 
-    def validate_summary_realtime(self,
-                            summary: str,
-                            original_text: Optional[str] = None) -> Dict[str, Any]:
-        """실시간 Batch 전용 요약 검증 (완화된 기준 적용)"""
+    def _validate_summary_internal(
+        self,
+        summary: str,
+        original_text: Optional[str],
+        semantic_checker: callable,
+        accept_threshold: float,
+        semantic_penalty: float
+    ) -> Dict[str, Any]:
+        """
+        요약 검증 공통 로직
+
+        Args:
+            summary: 검증할 요약 텍스트
+            original_text: 원본 텍스트 (환각 검사용)
+            semantic_checker: 의미 밀도 검사 메서드
+            accept_threshold: 품질 통과 기준 점수
+            semantic_penalty: 의미 밀도 실패 시 페널티 점수
+
+        Returns:
+            검증 결과 딕셔너리
+        """
         format_check = self.check_format(summary)
         length_check = self.check_length(summary)
 
         warnings = list(self.check_warnings(original_text, summary) if original_text else [])
-        semantic_check = self.check_semantic_density_realtime(summary)
+        semantic_check = semantic_checker(summary)
         for warning in semantic_check['warnings']:
             if warning and warning not in warnings:
                 warnings.append(warning)
@@ -193,7 +237,7 @@ class QualityValidator:
         if semantic_check['is_valid']:
             quality_score += 0.25
         else:
-            quality_score -= 0.10  # Realtime은 페널티 완화
+            quality_score -= semantic_penalty
         if not warnings:
             quality_score += 0.10
         if semantic_check['raw_speaker']:
@@ -201,7 +245,7 @@ class QualityValidator:
 
         quality_score = max(0.0, min(1.0, quality_score))
         warnings = list(dict.fromkeys(warnings))
-        is_acceptable = quality_score >= self.realtime_accept_threshold
+        is_acceptable = quality_score >= accept_threshold
 
         return {
             'format_check': format_check,
@@ -211,104 +255,43 @@ class QualityValidator:
             'quality_score': quality_score,
             'is_acceptable': is_acceptable
         }
+
+    def validate_summary_realtime(
+        self,
+        summary: str,
+        original_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """실시간 모드 전용 요약 검증 (완화된 기준 적용)"""
+        return self._validate_summary_internal(
+            summary,
+            original_text,
+            self.check_semantic_density_realtime,
+            self.realtime_accept_threshold,
+            semantic_penalty=0.10  # 실시간은 페널티 완화
+        )
 
     def check_semantic_density_realtime(self, summary: str) -> Dict[str, Any]:
-        """실시간 Batch용 의미 밀도 검사 (완화된 기준)"""
-        result = {
-            'is_valid': False,
-            'token_count': 0,
-            'unique_ratio': 0.0,
-            'repetition_ratio': 0.0,
-            'raw_speaker': False,
-            'warnings': []
-        }
-
-        if not summary:
-            result['warnings'].append('요약 본문이 비어 있습니다')
-            return result
-
-        normalized = re.sub(r'\*\*(고객|상담사|상담결과)\*\*\s*:', ' ', summary)
-        tokens = SEMANTIC_TOKEN_PATTERN.findall(normalized)
-        tokens = [tok for tok in tokens if tok not in self.stopwords]
-
-        token_count = len(tokens)
-        result['token_count'] = token_count
-
-        if token_count:
-            counter = Counter(tokens)
-            most_common = counter.most_common(1)[0][1]
-            unique_ratio = len(counter) / float(token_count)
-            repetition_ratio = most_common / float(token_count)
-        else:
-            unique_ratio = 0.0
-            repetition_ratio = 0.0
-
-        result['unique_ratio'] = unique_ratio
-        result['repetition_ratio'] = repetition_ratio
-
-        raw_speaker = bool(
-            RAW_SPEAKER_PATTERN.search(summary) or
-            RAW_SPEAKER_INLINE_PATTERN.search(summary)
+        """실시간 모드용 의미 밀도 검사 (완화된 기준)"""
+        return self._check_semantic_density_internal(
+            summary,
+            self.realtime_semantic_min_tokens,
+            self.realtime_semantic_unique_ratio,
+            self.realtime_semantic_repeat_threshold
         )
-        result['raw_speaker'] = raw_speaker
 
-        if token_count < self.realtime_semantic_min_tokens:
-            result['warnings'].append('요약 본문 분량이 부족합니다')
-        if unique_ratio < self.realtime_semantic_unique_ratio:
-            result['warnings'].append('어휘 다양성이 낮습니다')
-        if repetition_ratio > self.realtime_semantic_repeat_threshold:
-            result['warnings'].append('특정 단어가 과도하게 반복됩니다')
-        if raw_speaker:
-            result['warnings'].append('요약에 원문 대화 표현(고객:/상담사:)이 포함되어 있습니다')
-
-        result['is_valid'] = (
-            token_count >= self.realtime_semantic_min_tokens and
-            unique_ratio >= self.realtime_semantic_unique_ratio and
-            repetition_ratio <= self.realtime_semantic_repeat_threshold and
-            not raw_speaker
+    def validate_summary(
+        self,
+        summary: str,
+        original_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """배치 모드용 요약 검증 (엄격한 기준 적용)"""
+        return self._validate_summary_internal(
+            summary,
+            original_text,
+            self.check_semantic_density,
+            self.accept_threshold,
+            semantic_penalty=0.20  # 배치는 엄격한 페널티
         )
-        return result
-
-    def validate_summary(self,
-                        summary: str,
-                        original_text: Optional[str] = None) -> Dict[str, Any]:
-        format_check = self.check_format(summary)
-        length_check = self.check_length(summary)
-
-        warnings = list(self.check_warnings(original_text, summary) if original_text else [])
-        semantic_check = self.check_semantic_density(summary)
-        for warning in semantic_check['warnings']:
-            if warning and warning not in warnings:
-                warnings.append(warning)
-
-        quality_score = 0.0
-        if format_check['has_format']:
-            quality_score += 0.30
-        if length_check['is_valid']:
-            quality_score += 0.20
-        if format_check['has_result']:
-            quality_score += 0.15
-        if semantic_check['is_valid']:
-            quality_score += 0.25
-        else:
-            quality_score -= 0.20
-        if not warnings:
-            quality_score += 0.10
-        if semantic_check['raw_speaker']:
-            quality_score -= 0.05
-
-        quality_score = max(0.0, min(1.0, quality_score))
-        warnings = list(dict.fromkeys(warnings))
-        is_acceptable = quality_score >= self.accept_threshold
-
-        return {
-            'format_check': format_check,
-            'length_check': length_check,
-            'semantic_check': semantic_check,
-            'warnings': warnings,
-            'quality_score': quality_score,
-            'is_acceptable': is_acceptable
-        }
 
     def validate_batch_results(self,
                              results: List[Dict[str, Any]],
