@@ -655,8 +655,8 @@ class ConsultationService:
                 # 추가 GPU 정리 (더 강력한 방법)
                 try:
                     torch.cuda.ipc_collect()
-                except:
-                    pass
+                except (RuntimeError, AttributeError) as ipc_error:
+                    logger.debug(f"[ConsultationService] GPU IPC collect not available: {ipc_error}")
             
             # 시스템 가비지 컬렉션
             gc.collect()

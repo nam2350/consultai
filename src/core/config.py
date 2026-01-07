@@ -30,8 +30,17 @@ class ApplicationSettings(BaseSettings):
     ENABLE_WEB_UI: bool = Field(default=True, description="웹 UI 활성화 여부")
     ENABLE_ADMIN_UI: bool = Field(default=True, description="관리자 UI 활성화 여부")
     
-    # 보안 설정 - 프로덕션에서는 반드시 환경변수 사용
-    SECRET_KEY: str = Field(default="dev-secret-key-for-testing-only-32chars", min_length=32, description="JWT 시크릿 키")
+    # 보안 설정 - 환경변수 필수
+    SECRET_KEY: str = Field(
+        min_length=32,
+        description="JWT 시크릿 키 (환경변수 SECRET_KEY 필수 설정)"
+    )
+
+    # 개발 API 활성화 설정 (DEBUG와 분리)
+    ALLOW_DEV_ROUTES: bool = Field(
+        default=False,
+        description="개발 전용 API 라우트 활성화 여부 (DEBUG와 별도)"
+    )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, ge=1, description="액세스 토큰 만료 시간(분)")
     
     # AI 모델 설정 (이중 모델 시스템)
@@ -162,15 +171,20 @@ class ApplicationSettings(BaseSettings):
     )
 
     @field_validator('SECRET_KEY')
-    def validate_secret_key_security(cls, v):
+    def validate_secret_key_security(cls, v: str) -> str:
         """
         시크릿 키 보안 유효성 검사
-        
-        프로덕션 환경에서 기본 시크릿 키 사용을 방지합니다.
+
+        취약한 패턴의 시크릿 키 사용을 방지합니다.
         """
-        # 프로덕션 환경에서 개발용 키 사용 금지
-        if os.getenv("NODE_ENV") == "production" and "dev-secret-key" in v:
-            raise ValueError("프로덕션에서는 개발용 시크릿 키를 사용하지 마세요")
+        weak_patterns = ['dev-', 'test-', 'secret', 'password', '12345', 'admin']
+        v_lower = v.lower()
+        for pattern in weak_patterns:
+            if pattern in v_lower:
+                raise ValueError(
+                    f"보안에 취약한 시크릿 키입니다. '{pattern}' 패턴을 포함하지 마세요. "
+                    "강력한 랜덤 문자열을 사용하세요: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                )
         return v
 
     @field_validator('LOG_LEVEL')

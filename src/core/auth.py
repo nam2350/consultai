@@ -20,33 +20,19 @@ class BoundKeyValidator:
         """초기화: 환경변수에서 허용된 키 목록 로드"""
         self._load_valid_keys()
 
-    def _load_valid_keys(self):
+    def _load_valid_keys(self) -> None:
         """환경변수에서 유효한 바운드 키 목록 로드"""
         # 환경변수에서 쉼표로 구분된 키 목록 읽기
         keys_str = os.getenv("BOUND_KEYS", "")
-        node_env = os.getenv("NODE_ENV", "").lower()
 
         if not keys_str:
-            if node_env == "production":
-                logger.error("[인증] 프로덕션 환경에서 BOUND_KEYS가 설정되지 않았습니다.")
-                raise RuntimeError("BOUND_KEYS must be set in production")
-
-            # 기본 테스트 키 (개발 환경용)
-            logger.warning("[인증] BOUND_KEYS 환경변수가 설정되지 않았습니다. 기본 테스트 키를 사용합니다.")
-            self.valid_keys = {
-                "test_key_external_2025": {
-                    "name": "외부 시스템 테스트 키",
-                    "created_at": "2025-01-01",
-                    "expires_at": None,
-                    "permissions": ["realtime", "batch"]
-                },
-                "dev_key_12345678901234": {
-                    "name": "개발용 테스트 키",
-                    "created_at": "2025-01-01",
-                    "expires_at": None,
-                    "permissions": ["realtime", "batch"]
-                }
-            }
+            # BOUND_KEYS 환경변수 필수 - 환경에 관계없이
+            logger.error("[인증] BOUND_KEYS 환경변수가 설정되지 않았습니다.")
+            logger.error("[인증] 키 생성 방법: python -c \"import secrets; print(secrets.token_urlsafe(24))\"")
+            raise RuntimeError(
+                "BOUND_KEYS 환경변수가 설정되지 않았습니다. "
+                ".env 파일에 BOUND_KEYS=your_secure_key_min_20_chars 형식으로 설정하세요."
+            )
         else:
             # 환경변수에서 키 파싱
             self.valid_keys = {}
