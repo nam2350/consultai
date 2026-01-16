@@ -1,7 +1,7 @@
 # ConsultAI
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.7+-red.svg)](https://pytorch.org/)
 [![NVIDIA Blackwell](https://img.shields.io/badge/NVIDIA-Blackwell-76B900.svg)](https://www.nvidia.com/en-us/data-center/blackwell-platform/)
 
 ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석합니다. STT 변환된 음성 데이터를 처리하여 상담사와 관리자가 즉시 활용할 수 있는 구조화된 정보를 자동 생성합니다.
