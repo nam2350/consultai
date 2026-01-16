@@ -25,14 +25,12 @@ class CategoryClassifier:
             self.summarizer = shared_summarizer
             self.model_loaded = True  # 이미 로드된 모델 사용
             self.use_shared_model = True  # 공유 모델 플래그
-            # logger.debug("[CategoryClassifier] 공유 summarizer 사용")  # 프로덕션 최적화
         else:
             # 독립 summarizer 생성 (기존 방식)
             self.summarizer = Qwen2507Summarizer(model_path)
             self.model_loaded = False
             self.use_shared_model = False
         
-        # generation_params 제거 - summarizer의 파라미터 사용
     
     def load_model(self) -> bool:
         """모델 로드"""

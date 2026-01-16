@@ -1,5 +1,5 @@
 """
-Qwen3-4B-Instruct-2507 전용 요약 시스템 (WhisperX_web 검증 버전)
+Qwen3-4B-Instruct-2507 전용 요약 시스템 
 - 최신 2507 아키텍처 최적화
 - 25-148% 성능 향상 (MMLU-Pro: 58.0, AIME25: 47.4)  
 - 향상된 instruction following과 추론 능력
@@ -18,15 +18,14 @@ import gc
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, StoppingCriteria, StoppingCriteriaList
 
-# 경고 메시지 억제
 warnings.filterwarnings("ignore", message=".*pad_token_id.*eos_token_id.*")
 warnings.filterwarnings("ignore", message=".*device_map.*")
 
 # GPU 최적화 설정 (RTX 5080 Blackwell 아키텍처 최적화)
 if torch.cuda.is_available():
-    torch.backends.cuda.matmul.allow_tf32 = True  # Tensor Core TF32 사용
+    torch.backends.cuda.matmul.allow_tf32 = True  
     torch.backends.cudnn.allow_tf32 = True
-    torch.backends.cudnn.benchmark = True  # 동일한 입력 크기에 최적화
+    torch.backends.cudnn.benchmark = True  
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +38,14 @@ class Qwen2507Summarizer:
         
         # 2507 버전 기본 파라미터 (문장 완성도 개선)
         self.generation_params = {
-            'max_new_tokens': 280,   # 문장 완성도 개선을 위해 증가 (210 → 280)
+            'max_new_tokens': 280,   
             'do_sample': True,
-            'temperature': 0.7,      # WhisperX 원본 값
-            'top_k': 20,            # WhisperX 원본 값
-            'top_p': 0.8,           # WhisperX 원본 값
-            'min_p': 0.0,           # WhisperX 추가 파라미터
-            'repetition_penalty': 1.05,  # WhisperX 원본 값
-            'early_stopping': True, # WhisperX 품질 개선
+            'temperature': 0.7,      
+            'top_k': 20,            
+            'top_p': 0.8,           
+            'min_p': 0.0,           
+            'repetition_penalty': 1.05,  
+            'early_stopping': True, 
             'pad_token_id': None,
             'eos_token_id': None,
             'use_cache': True
