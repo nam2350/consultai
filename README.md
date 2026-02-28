@@ -4,14 +4,14 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.7+-red.svg)](https://pytorch.org/)
 [![NVIDIA Blackwell](https://img.shields.io/badge/NVIDIA-Blackwell-76B900.svg)](https://www.nvidia.com/en-us/data-center/blackwell-platform/)
 
-ConsultAI는 콜센터 상담 데이터를 AI로 실시간 분석합니다. STT 변환된 음성 데이터를 처리하여 상담사와 관리자가 즉시 활용할 수 있는 구조화된 정보를 자동 생성합니다.
+ConsultAI는 STT 변환된 음성 데이터를 처리하여 구조화된 정보를 자동 생성합니다.
 
 ---
 
 ## 주요 기능
 
 ### 핵심 기능
--  **요약 생성**: 3줄 구조 (고객/상담사/결과)
+-  **요약 생성**: 3줄 구조 
 -  **키워드 추출**: 맥락 기반 1-3개 핵심 키워드
 -  **제목 생성**: 키워드형/서술형 타이틀
 -  **품질 검증**: 환각 차단 및 자동 품질 점수
