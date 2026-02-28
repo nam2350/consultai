@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.7+-red.svg)](https://pytorch.org/)
 [![NVIDIA Blackwell](https://img.shields.io/badge/NVIDIA-Blackwell-76B900.svg)](https://www.nvidia.com/en-us/data-center/blackwell-platform/)
 
-ConsultAI는 STT 변환된 음성 데이터를 처리하여 구조화된 정보를 자동 생성합니다.
+ConsultAI는 STT로 변환된 음성 데이터를 처리하여 구조화된 정보를 자동 생성합니다.
 
 ---
 
